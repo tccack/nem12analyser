@@ -157,8 +157,10 @@ details .inner{margin-top:12px;display:flex;flex-direction:column;gap:12px}
             <input type="number" id="batKwh" min="0" max="200" step="0.1" value="0"></div>
           <div class="field"><label for="solarKw">Existing solar size (kW of panels, 0 if none)</label>
             <input type="number" id="solarKw" min="0" max="40" step="0.5" value="0"></div>
-          <div class="field"><label for="evHas">Do you have an electric vehicle (or planning one)</label>
-            <select id="evHas"><option value="no">No</option><option value="yes">Yes</option></select></div>
+          <div class="field"><label for="evHas">Electric vehicle</label>
+            <select id="evHas"><option value="no">No</option><option value="have">Yes, I already have one</option><option value="plan">No, but I am planning to get one</option></select></div>
+          <div class="field" id="evChgWrap" style="display:none"><label for="evChg">How is it (or will it be) charged at home</label>
+            <select id="evChg"><option value="unsure">Not sure</option><option value="2.3">Plug-in cable on a power point (about 2.3 kW)</option><option value="7.4">Wall charger on single phase (about 7 kW)</option><option value="11">Wall charger on three phase (about 11 kW)</option></select></div>
           <div class="field"><label for="evKm">Distance driven</label>
             <div style="display:flex;gap:8px"><input type="number" id="evKm" min="0" max="3000" step="10" value="0" style="flex:1"><select id="evUnit" style="flex:1"><option value="week">km per week</option><option value="day">km per day</option></select></div></div>
           <div class="field"><label for="evWhen">When do you mostly charge</label>
@@ -371,7 +373,7 @@ const CIRC=[
  {k:'cook',name:'Cooking (cooktop and oven)',types:[['elec','Electric cooktop and/or oven',0.5,2.0,32],['gas','Gas, no electric cooking circuit',0,0,0]]},
  {k:'ac',name:'Air conditioning',types:[['duct','Ducted',0.7,3.0,32],['split','Split system(s)',0.7,2.0,20]]},
  {k:'hws',name:'Hot water',types:[['el','Electric element (storage or instant)',1.0,5.0,25],['hp','Heat pump',0.25,1.5,20]]},
- {k:'ev',name:'EV charger',defBk:'off',types:[['ev1','Single phase wall charger',1.0,10,32,1],['ev3','Three phase wall charger (amps per phase)',1.0,10,32,3],['evg','Plug-in cable to a power point (10 A)',1.0,10,10,1]]}];
+ {k:'ev',name:'EV charger',defBk:'off',types:[['ev1','Single phase wall charger',1.0,10,32,1],['ev3','Three phase wall charger (amps per phase)',1.0,10,16,3],['evg','Plug-in cable to a power point (10 A)',1.0,10,10,1]]}];
 const REST_KW=1.5;   // fridge, lights, electronics, etc. running alongside the circuits
 function buildCirc(){
   $('circBox').innerHTML=CIRC.map(c=>`<fieldset data-c="${c.k}" style="border:1px solid var(--line);border-radius:6px;padding:12px;min-width:0"><legend style="padding:0 6px;font-weight:600;font-size:14px">${c.name}</legend>
@@ -386,7 +388,10 @@ function buildCirc(){
   </div></fieldset>`).join('');
   syncCirc()}
 function syncCirc(){document.querySelectorAll('#circBox fieldset').forEach(f=>{const st=f.querySelector('[data-f=st]').value;f.querySelectorAll('.x').forEach(x=>x.style.display=st==='yes'?'':'none')})}
-function evDefKwh(){try{if($('evHas').value==='yes'&&+$('evKm').value>0)return +$('evKm').value*0.18/($('evUnit').value==='week'?7:1)}catch(e){}return 10}
+let evTyTouched=false;
+function syncEvCirc(o){if(evTyTouched||o.evHas==='no')return;const m={'2.3':['evg',10],'7.4':['ev1',32],'11':['ev3',16]}[o.evChg];if(!m)return;
+  const f=document.querySelector('#circBox fieldset[data-c=ev]');if(!f)return;const ty=f.querySelector('[data-f=ty]'),a=f.querySelector('[data-f=a]');if(ty.value!==m[0]){ty.value=m[0];a.value=m[1]}}
+function evDefKwh(){try{if($('evHas').value==='plan'&&+$('evKm').value>0)return +$('evKm').value*0.18/($('evUnit').value==='week'?7:1)}catch(e){}return 10}
 function readCirc(){
   return CIRC.map(c=>{const f=document.querySelector(`#circBox fieldset[data-c=${c.k}]`);if(!f)return null;const g=n=>f.querySelector(`[data-f=${n}]`);
     if(g('st').value!=='yes')return{k:c.k,name:c.name,st:g('st').value};
@@ -425,7 +430,7 @@ function sizing(S,o){
   // solar
   const groups=new Map();S.days.forEach((d,i)=>{const k=d.slice(0,6);if(!groups.has(k))groups.set(k,[]);groups.get(k).push(dsT[i])});
   let rows=[...groups].map(([k,a])=>({k,mon:+k.slice(4,6)-1,days:a.length,mean:avg(a)})).filter(r=>r.days>=10);
-  const evDay=(o.evHas==='yes'&&o.evKm>0)?o.evKm*0.18/(o.evUnit==='week'?7:1):0,evSolar=o.evWhen==='solar'?evDay:0;
+  const evDay=(o.evHas==='plan'&&o.evKm>0)?o.evKm*0.18/(o.evUnit==='week'?7:1):0,evSolar=o.evWhen==='solar'?evDay:0;
   rows.forEach(r=>{r.mean+=evSolar;r.yield=MONTH_YIELD[r.mon];r.kw=r.mean/0.85/r.yield*1.25});
   let dm=rows.length?rows.reduce((a,b)=>b.kw>a.kw?b:a):null;let assumed=false;
   const winter=rows.some(r=>[5,6,7].includes(r.mon));
@@ -491,10 +496,10 @@ function profileChart(a,b){
 
 /* ---------- render ---------- */
 let S=null,SZ=null,sourceName='',isSample=true;
-function readOpts(){return{phase:$('phase').value,hws:$('hws').value,scope:$('scope').value,hours:Math.max(6,Math.min(96,+$('hours').value||24)),pct:+$('pct').value,hasSolar:$('hasSolar').value,solarKw:Math.max(0,Math.min(40,+$('solarKw').value||0)),evHas:$('evHas').value,evKm:Math.max(0,+$('evKm').value||0),evUnit:$('evUnit').value,evWhen:$('evWhen').value}}
+function readOpts(){return{phase:$('phase').value,hws:$('hws').value,scope:$('scope').value,hours:Math.max(6,Math.min(96,+$('hours').value||24)),pct:+$('pct').value,hasSolar:$('hasSolar').value,solarKw:Math.max(0,Math.min(40,+$('solarKw').value||0)),evHas:$('evHas').value,evKm:Math.max(0,+$('evKm').value||0),evUnit:$('evUnit').value,evWhen:$('evWhen').value,evChg:$('evChg').value}}
 function run(){
-  if(!S)return;const o=readOpts();if(o.hasSolar!=='yes')o.solarKw=0;if(o.evHas!=='yes')o.evKm=0;o.circ=readCirc();SZ=sizing(S,o);const msgs=[];
-  {const fw=id=>$(id).closest('.field'),sS=o.hasSolar==='yes',sE=o.evHas==='yes';fw('solarKw').style.display=sS?'':'none';fw('evKm').style.display=sE?'':'none';fw('evWhen').style.display=sE?'':'none'}
+  if(!S)return;const o=readOpts();if(o.hasSolar!=='yes')o.solarKw=0;if(o.evHas!=='plan')o.evKm=0;syncEvCirc(o);o.circ=readCirc();SZ=sizing(S,o);const msgs=[];
+  {const fw=id=>$(id).closest('.field'),sS=o.hasSolar==='yes',sE=o.evHas==='plan',sH=o.evHas!=='no';fw('solarKw').style.display=sS?'':'none';fw('evKm').style.display=sE?'':'none';fw('evWhen').style.display=sE?'':'none';$('evChgWrap').style.display=sH?'':'none'}
   $('batKwhWrap').style.display=$('hasBat').value==='yes'?'':'none';
   SZ.exBat=$('hasBat').value==='yes'?Math.max(0,+$('batKwh').value||0):0;SZ.addKwh=Math.max(0,Math.ceil((SZ.kwh-SZ.exBat)*2)/2);
   const chs=S.eK.map(k=>k+(k==='E2'?' (controlled load)':k==='E1'?' (general)':'')).concat(S.bK.map(k=>k+' (export)')).join(', ');
@@ -502,7 +507,11 @@ function run(){
   $('dataChip').textContent=isSample?'Example data, upload yours to replace':'Using '+sourceName;
   if(SZ.sol){const q=SZ.sol,tot=avg(SZ.dsT);msgs.push('Existing '+o.solarKw+' kW solar: it is estimated to produce about '+q.genDay.toFixed(1)+' kWh a day on average'+(S.bK.length?', of which about '+q.expDay.toFixed(1)+' kWh is exported (from the file)':'')+'. About '+q.addDay.toFixed(1)+' kWh a day ('+Math.round(100*q.addDay/tot)+'% of the estimated household use of '+tot.toFixed(1)+' kWh a day) was used straight away and is hidden by net metering, so it has been added back. '+(S.bK.length?'':'The file has no export channel, so 40% of generation is assumed used on site. ')+'Generation is a typical Adelaide estimate, not measured. This page is for houses with no solar or solar only, with no battery fitted yet.')}
   else if(S.bK.length||o.hasSolar==='yes')msgs.push('This file includes solar export or you have solar installed. The meter then shows net use, so the real household load is higher than shown and every size below is a minimum. Enter the size of your existing solar (kW of panels) and the daytime use will be estimated and added back.');
-  if(SZ.evDay>0)msgs.push('EV: '+o.evKm+' km '+(o.evUnit==='week'?'a week':'a day')+' at 18 kWh per 100 km is about '+SZ.evDay.toFixed(1)+' kWh a day. '+(SZ.evWhen==='solar'?'Charging from solar, so this was added to the solar target. ':'Charging overnight from the grid at off-peak, so no extra solar is needed. ')+'The EV is not counted in the backup battery or inverter size. If your file already includes EV charging, leave the EV box on No.');
+  if(SZ.evDay>0)msgs.push('EV: '+o.evKm+' km '+(o.evUnit==='week'?'a week':'a day')+' at 18 kWh per 100 km is about '+SZ.evDay.toFixed(1)+' kWh a day. '+(SZ.evWhen==='solar'?'Charging from solar, so this was added to the solar target. ':'Charging overnight from the grid at off-peak, so no extra solar is needed. ')+'The planned EV is not counted in the backup battery or inverter size.');
+  if(o.evHas==='have')msgs.push('You already have an electric vehicle, so its charging is already in your meter file and nothing extra was added for it. It is counted in the sizes below, which can make them much larger than your house needs. Most homes do not keep the car charging in a blackout. Open Your circuits, switch on EV charger, set it to Leave off and enter how many kWh a typical charge uses, and the sizes will drop.');
+  if(o.evHas!=='no'){const cr=o.evChg==='unsure'?(o.phase==='single'?7.4:11):+o.evChg;
+    if(o.evHas==='plan'&&SZ.evDay>0)msgs.push('Charging about '+SZ.evDay.toFixed(1)+' kWh a day at '+(o.evChg==='unsure'?'a typical ':'')+fmt(cr,1)+' kW takes about '+fmt(SZ.evDay/cr,1)+' hours of charging on an average day.');
+    if(cr>=11&&o.phase==='single')msgs.push('An 11 kW charger needs a three phase supply. On single phase the most a home charger can usually deliver is about 7 kW.');}
   if(o.hws==='cl'&&!S.per.E2)msgs.push('You said hot water is on controlled load, but the file has no E2 channel, so nothing was removed from the backup load.');
   if(S.days.length<30)msgs.push('Only '+S.days.length+' days of data. Use at least a full winter month for a reliable result.');
   if(SZ.assumed)msgs.push('The file has no June to August data. Solar is sized with a typical June yield on your average load. Winter loads are usually higher, so treat it as a minimum.');
@@ -617,7 +626,7 @@ $('file').addEventListener('change',e=>{const f=e.target.files[0];if(!f)return;f
 const drop=$('drop');['dragenter','dragover'].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.add('over')}));
 ['dragleave','drop'].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.remove('over')}));
 drop.addEventListener('drop',e=>{const f=e.dataTransfer.files[0];if(f)f.text().then(t=>load(t,f.name,false))});
-['hasBat','phase','hws','scope','hours','pct','hasSolar','solarKw','evHas','evKm','evUnit','evWhen'].forEach(id=>$(id).addEventListener('change',run));buildTar();$('dlRpt').addEventListener('click',()=>{try{window.print()}catch(e){alert('Use your browser Print command and choose Save as PDF.')}});$('tarDet').addEventListener('input',e=>{const el=e.target;if(el.dataset.f==='p'&&el.dataset.t==='u'&&TOU.find(r=>r.k===el.dataset.k&&r.of))el.dataset.own=el.value===''?'':'1';syncTar();saveTar()});$('tarDet').addEventListener('change',()=>{syncTar();saveTar()});buildCirc();$('circBox').addEventListener('change',()=>{syncCirc();run()});$('circBox').addEventListener('input',e=>{if(e.target.type==='number')run()});$('solarKw').addEventListener('input',run);$('batKwh').addEventListener('input',run);
+['evChg','hasBat','phase','hws','scope','hours','pct','hasSolar','solarKw','evHas','evKm','evUnit','evWhen'].forEach(id=>$(id).addEventListener('change',run));buildTar();$('dlRpt').addEventListener('click',()=>{try{window.print()}catch(e){alert('Use your browser Print command and choose Save as PDF.')}});$('tarDet').addEventListener('input',e=>{const el=e.target;if(el.dataset.f==='p'&&el.dataset.t==='u'&&TOU.find(r=>r.k===el.dataset.k&&r.of))el.dataset.own=el.value===''?'':'1';syncTar();saveTar()});$('tarDet').addEventListener('change',()=>{syncTar();saveTar()});buildCirc();$('circBox').addEventListener('change',e=>{if(e.target.matches('[data-c=ev] [data-f=ty]'))evTyTouched=true;syncCirc();run()});$('circBox').addEventListener('input',e=>{if(e.target.type==='number')run()});$('solarKw').addEventListener('input',run);$('batKwh').addEventListener('input',run);$('evKm').addEventListener('input',run);
 window.__BS={parseNEM12,buildSeries,sizing,recommend,load,get S(){return S},get SZ(){return SZ}};
 load(sample(),'example',true);
 })();
