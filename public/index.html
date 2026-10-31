@@ -126,8 +126,25 @@ details .inner{margin-top:12px;display:flex;flex-direction:column;gap:12px}
     <div class="grid2">
       <div class="panel" style="display:flex;flex-direction:column;gap:12px">
         <div>
-          <h2>Your meter data</h2>
-          <p class="muted" style="font-size:13.5px">NEM12 CSV from SA Power Networks or your retailer. The file is read in this browser and is not uploaded anywhere.</p>
+          <h2>Your electricity use</h2>
+          <p class="muted" style="font-size:13.5px">Best: a NEM12 CSV from SA Power Networks or your retailer. It is read in this browser and is not uploaded anywhere. No file? Type in the figures from one of your bills instead.</p>
+        </div>
+        <div class="field"><label for="srcMode">How will you give your usage?</label>
+          <select id="srcMode"><option value="nem12">Upload my NEM12 meter file</option><option value="total">Type in one total from a bill</option><option value="brackets">Type in the totals for each time period on a bill</option></select></div>
+        <div id="manWrap" style="display:none;flex-direction:column;gap:10px">
+          <div class="fields">
+            <div class="field"><label for="mDays">Days in the billing period</label><input type="number" id="mDays" min="1" max="366" step="1" placeholder="e.g. 92"></div>
+            <div class="field"><label for="mStart">First day of the bill (optional)</label><input type="date" id="mStart"></div>
+          </div>
+          <div class="fields" id="mTotBox"><div class="field"><label for="mTot">Total electricity used, kWh</label><input type="number" id="mTot" min="0" step="0.1" placeholder="grid usage only, e.g. 1450"></div></div>
+          <div class="fields" id="mBrBox" style="display:none">
+            <div class="field"><label for="mAm">AM peak, kWh</label><input type="number" id="mAm" class="mb" min="0" step="0.1"></div>
+            <div class="field"><label for="mPm">PM peak, kWh</label><input type="number" id="mPm" class="mb" min="0" step="0.1"></div>
+            <div class="field"><label for="mSh">Shoulder, kWh</label><input type="number" id="mSh" class="mb" min="0" step="0.1"></div>
+            <div class="field"><label for="mOf">Off peak, kWh</label><input type="number" id="mOf" class="mb" min="0" step="0.1"></div>
+            <div class="field"><label for="mCl">Controlled load, kWh (if any)</label><input type="number" id="mCl" class="mb" min="0" step="0.1"></div>
+          </div>
+          <p class="muted" style="font-size:12.5px">Use the energy bought from the grid, not what the house used from solar. A bill only gives averages, so the busiest day and the highest power are estimated from a typical household pattern with a margin added. Treat the result as a rough guide. Period times follow the tariff section (or the standard times: AM peak 06:00 to 10:00, PM peak 16:00 to midnight, shoulder 10:00 to 16:00, off peak midnight to 06:00).</p>
         </div>
         <label class="drop" id="drop" for="file">
           <span style="font-weight:600">Choose a NEM12 .csv file</span>
@@ -514,8 +531,9 @@ function run(){
   if(o.evHas!=='no'){const cr=o.evChg==='unsure'?(o.phase==='single'?7.4:11):+o.evChg;
     if(o.evHas==='plan'&&SZ.evDay>0)msgs.push('Charging about '+SZ.evDay.toFixed(1)+' kWh a day at '+(o.evChg==='unsure'?'a typical ':'')+fmt(cr,1)+' kW takes about '+fmt(SZ.evDay/cr,1)+' hours of charging on an average day.');
     if(cr>=11&&o.phase==='single')msgs.push('An 11 kW charger needs a three phase supply. On single phase the most a home charger can usually deliver is about 7 kW.');}
-  if(o.hws==='cl'&&!S.per.E2)msgs.push('You said hot water is on controlled load, but the file has no E2 channel, so nothing was removed from the backup load.');
-  if(S.days.length<30)msgs.push('Only '+S.days.length+' days of data. Use at least a full winter month for a reliable result.');
+  if(S.manual)msgs.push('These sizes come from bill totals, not meter readings. The busiest day and the highest power are estimated from a typical household pattern (the busiest day about 30% above average and the highest half hour about 10% of a day\'s use), so they are rougher than a NEM12 file. If you can get your NEM12 file, it will be more accurate.');
+  if(o.hws==='cl'&&!S.per.E2&&!S.manual)msgs.push('You said hot water is on controlled load, but the file has no E2 channel, so nothing was removed from the backup load.');
+  if(S.days.length<30&&!S.manual)msgs.push('Only '+S.days.length+' days of data. Use at least a full winter month for a reliable result.');
   if(SZ.assumed)msgs.push('The file has no June to August data. Solar is sized with a typical June yield on your average load. Winter loads are usually higher, so treat it as a minimum.');
   if(S.gaps)msgs.push(S.gaps+' channel-days are missing from the file and counted as zero.');
   if(S.bad)msgs.push(S.bad+' blank readings were counted as zero.');
@@ -542,7 +560,7 @@ function run(){
   const sz2=Object.assign({},SZ,{phase});
   // summary
   const ph3=phase==='three';
-  $('summary').innerHTML=`<div><h2>What your house needs</h2><p class="muted" style="font-size:13.5px">${S.days.length} days, ${S.iv}-minute readings, channels ${esc(chs)}.</p></div>
+  $('summary').innerHTML=`<div><h2>What your house needs</h2><p class="muted" style="font-size:13.5px">${S.manual?S.days.length+' days, estimated from the bill figures you typed in.':S.days.length+' days, '+S.iv+'-minute readings, channels '+esc(chs)+'.'}</p></div>
   <div class="stats">
    <div class="stat"><span class="k">Battery</span><span class="v">${fmt(SZ.kwh,1)}<small>kWh usable</small></span><span class="w">${SZ.hours} hours without grid on a heavy day (${fmt(SZ.design,1)} kWh) plus 10%.</span></div>
    ${SZ.exBat>0?`<div class="stat"><span class="k">Extra battery</span><span class="v">${fmt(SZ.addKwh,1)}<small>kWh to add</small></span><span class="w">You have ${fmt(SZ.exBat,1)} kWh of the ${fmt(SZ.kwh,1)} kWh needed.</span></div>`:''}
@@ -564,6 +582,7 @@ function run(){
      <p class="muted" style="font-size:12.5px;margin-top:8px">All channels added together. Each reading is a ${S.iv}-minute average.</p></div>
    <div class="panel"><h3>Ten heaviest days and their busiest hours</h3><div class="scroll"><table><tr><th>Day</th><th class="n">kWh</th><th>Three busiest one-hour periods</th></tr>${t10}</table></div></div>
   </div>`;
+  if(S.manual)$('evidence').innerHTML='<div class="panel"><h2>What your data shows</h2><p class="muted">No charts are drawn for typed-in figures, because they would show an estimated pattern, not your real use. Upload a NEM12 file to see your own busiest days and highest power.</p></div>';
   // method
   const dm=SZ.dm;
   $('method').innerHTML=`<div><h2>How these numbers were reached</h2></div><div class="panel"><ol class="steps">
@@ -618,12 +637,48 @@ $('copyRank').onclick=()=>{const txt=JSON.stringify(RK);$('rankJson').value=txt;
 $('applyRank').onclick=()=>{try{const o=JSON.parse($('rankJson').value);for(const k in o)RK[k]=Object.assign({rank:3,ex:false,reason:''},o[k]);saveRank();run()}catch(e){$('msgs').innerHTML='<div class="banner">Those settings could not be read.</div>'}};
 $('resetRank').onclick=()=>{try{localStorage.removeItem('bs_rank_v1')}catch(e){}RK=rankMap();D.rank.forEach(r=>RK[r.m]={rank:r.rank,ex:!!r.ex,reason:r.reason});run()};
 
+let FILE=null;
 function load(text,name,isS){
-  try{const p=parseNEM12(text);S=buildSeries(p);sourceName=name;isSample=isS;
+  try{const p=parseNEM12(text);S=buildSeries(p);sourceName=name;isSample=isS;FILE={S,name,isS};$('srcMode').value='nem12';setMode();
     if(!isS){$('hws').value=S.per.E2?'cl':'none';$('hasSolar').value=S.bK.length?'yes':'no'}
     $('fileStatus').textContent=isS?'Showing a generated example household.':name+': '+S.days.length+' days loaded.';run()}
   catch(err){$('fileStatus').textContent='';$('msgs').innerHTML='<div class="banner">'+esc(err.message)+'</div>'}
 }
+
+/* ---------- manual entry from a bill ---------- */
+function tmin(s){const q=String(s||'').split(':').map(Number);return(q[0]||0)*60+(q[1]||0)}
+function winOf(k,da,db){const a=tIn(k,'a'),b=tIn(k,'b');return[tmin(a&&a.value||da),tmin(b&&b.value||db)]}
+function inWin(t,w){return w[0]<w[1]?(t>=w[0]&&t<w[1]):(t>=w[0]||t<w[1])}
+function setMode(){const m=$('srcMode').value;$('manWrap').style.display=m==='nem12'?'none':'flex';$('mTotBox').style.display=m==='total'?'':'none';$('mBrBox').style.display=m==='brackets'?'':'none';$('drop').style.display=m==='nem12'?'':'none'}
+function buildManual(){
+  const m=$('srcMode').value,nd=Math.round(+$('mDays').value||0),num=id=>Math.max(0,+$(id).value||0);
+  if(nd<1||nd>366)return 'Enter the number of days in the billing period (1 to 366).';
+  const b=[];for(let i=0;i<48;i++)b.push(i<12?.35:i<18?.9:i<32?.7:i<35?1:i<41?2.2:i<44?1.2:.6);
+  b[37]=0;const rest=b.reduce((a,x)=>a+x,0);b[37]=rest/9;   // busiest half hour is 10% of the day when only a total is known
+  const cl=m==='brackets'?num('mCl'):0;let gen;   // kWh per day for each half hour of a typical day
+  if(m==='total'){const tot=num('mTot');if(!(tot>0))return 'Enter the total kWh from the bill.';const s=b.reduce((a,x)=>a+x,0);gen=b.map(x=>x/s*tot/nd)}
+  else{const W={am:winOf('am','06:00','10:00'),pm:winOf('pm','16:00','00:00'),sh:winOf('s1','10:00','16:00')};
+    const v={am:num('mAm'),pm:num('mPm'),sh:num('mSh'),of:num('mOf')};if(!(v.am+v.pm+v.sh+v.of>0))return 'Enter the kWh for each time period from the bill.';
+    const br=i=>{const t=i*30+15;return inWin(t,W.am)?'am':inWin(t,W.pm)?'pm':inWin(t,W.sh)?'sh':'of'};
+    const sums={am:0,pm:0,sh:0,of:0};for(let i=0;i<48;i++)sums[br(i)]+=b[i];
+    gen=b.map((x,i)=>{const k=br(i);return sums[k]>0?x/sums[k]*v[k]/nd:0})}
+  const c=winOf('co','23:30','06:30'),cw=[];for(let i=0;i<48;i++)cw.push(inWin(i*30+15,c)?1:0);const cs=cw.reduce((a,x)=>a+x,0)||1;
+  const st=$('mStart').value?new Date($('mStart').value+'T00:00:00Z'):new Date(Date.now()-nd*864e5);
+  const days=[];for(let d=0;d<nd;d++){const x=new Date(Date.UTC(st.getUTCFullYear(),st.getUTCMonth(),st.getUTCDate()+d));days.push(x.getUTCFullYear()+String(x.getUTCMonth()+1).padStart(2,'0')+String(x.getUTCDate()).padStart(2,'0'))}
+  const N=nd*48,tot=new Float64Array(N),e1=new Float64Array(N),e2=new Float64Array(N);
+  for(let d=0;d<nd;d++){const f=nd<5?1.15:(d%5===4?1.3:0.925);   // one day in five is a heavy day, the rest lighter, average unchanged
+    for(let i=0;i<48;i++){const a=gen[i]*f,c2=cl>0?cl/nd*cw[i]/cs*f:0;e1[d*48+i]=a;e2[d*48+i]=c2;tot[d*48+i]=a+c2}}
+  const per={E1:e1};if(cl>0)per.E2=e2;
+  return{iv:30,n:48,days,N,tot,gen:new Float64Array(N),per,eK:cl>0?['E1','E2']:['E1'],bK:[],gaps:0,bad:0,skipped:[],manual:true};
+}
+function useManual(){const r=buildManual();
+  if(typeof r==='string'){$('fileStatus').textContent=r;return}
+  S=r;sourceName='the figures you typed in';isSample=false;
+  $('fileStatus').textContent='Using your typed-in figures ('+S.days.length+' days). These are estimates, not meter readings.';
+  run()}
+function onMode(){setMode();if($('srcMode').value==='nem12'){if(FILE){S=FILE.S;sourceName=FILE.name;isSample=FILE.isS;$('fileStatus').textContent=FILE.isS?'Showing a generated example household.':FILE.name+': '+S.days.length+' days loaded.';run()}}else useManual()}
+$('srcMode').addEventListener('change',onMode);
+['mDays','mStart','mTot','mAm','mPm','mSh','mOf','mCl'].forEach(id=>$(id).addEventListener('input',()=>{if($('srcMode').value!=='nem12')useManual()}));
 $('file').addEventListener('change',e=>{const f=e.target.files[0];if(!f)return;f.text().then(t=>load(t,f.name,false))});
 const drop=$('drop');['dragenter','dragover'].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.add('over')}));
 ['dragleave','drop'].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.remove('over')}));
