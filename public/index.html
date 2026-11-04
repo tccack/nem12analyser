@@ -224,6 +224,13 @@ details .inner{margin-top:12px;display:flex;flex-direction:column;gap:12px}
   <section id="summary"></section>
   <section id="evidence"></section>
   <section id="method"></section>
+  <section id="feedback" class="panel" style="margin-top:16px">
+    <h2>Does something look wrong?</h2>
+    <p class="muted" style="font-size:13.5px">If a result looks wrong, or the page misread your house, please tell me. Your file is never sent. Only the short summary below is shared, and only if you choose to copy it or email it. It has no meter number, address or dates.</p>
+    <div class="field"><label for="fbText">What looks wrong or surprising? (optional)</label><textarea id="fbText" rows="3" maxlength="1500" style="width:100%;font:inherit" placeholder="e.g. I have a pool pump, not an EV"></textarea></div>
+    <div class="field" style="margin-top:10px"><label for="fbSum">This is exactly what will be included</label><textarea id="fbSum" rows="9" readonly style="width:100%;font:12.5px/1.45 ui-monospace,Menlo,Consolas,monospace"></textarea></div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:10px"><button type="button" id="fbCopy">Copy the summary</button><a id="fbMail" class="btn" href="#" style="padding:8px 14px;border:1px solid var(--line);border-radius:6px;text-decoration:none">Email it to me</a><span id="fbDone" class="muted" style="font-size:13px;align-self:center"></span></div>
+  </section>
   <section id="shortlist"></section>
 
   <section id="rankSec">
@@ -606,6 +613,7 @@ function run(){
    <li><div><b>Solar capacity.</b> ${SZ.assumed?'There is no winter month in the file, so a typical June is used.':esc(MON[dm.mon])+' is the hardest month at '+fmt(dm.mean,1)+' kWh a day.'} Panels must cover that day's use, allowing 15% for system and battery losses and 25% for cloud, at a typical ${fmt(dm.yield,1)} kWh per kW per day. ${fmt(dm.mean,1)} ÷ 0.85 ÷ ${fmt(dm.yield,1)} × 1.25 = ${fmt(dm.kw,1)} kW, rounded up to <b>${fmt(SZ.solar,1)} kW</b>. This includes the hot water, assuming it is moved to run on solar in the middle of the day.</div></li>
    <li><div><b>Shortlist.</b> Only battery-capable inverters of the right phase, with a backup rating above the power needed, are considered. For each, the smallest battery stack that reaches the energy and power needed is chosen. The closest fit per manufacturer wins, then manufacturers are ordered by the site ranking and the three best shown. Excluded manufacturers are skipped.</div></li>
   </ol></div>`;
+  fbRefresh();
   // shortlist
   const R=recommend(sz2);
   const stars=n=>'★'.repeat(n)+'☆'.repeat(5-n);
@@ -692,6 +700,25 @@ $('findings').addEventListener('change',e=>{const i=e.target.dataset.fi;if(i===u
   if(f.ans==='battery'&&$('hasBat').value!=='yes')$('hasBat').value='yes';
   if(f.ans==='car'&&$('evHas').value==='no')$('evHas').value='have';
   run()});
+
+
+/* ---------- feedback summary (no file data, no dates, no meter number) ---------- */
+const FB_TO='acmkuiper+nem12feedback@gmail.com',FB_SUBJ='NEM12 battery sizing page: feedback on my result';
+function fbSummary(){
+  if(!S||!SZ)return'';const o=readOpts(),L=[];
+  L.push('Source: '+(S.manual?'typed-in bill figures ('+$('srcMode').value+')':isSample?'example house':'NEM12 file')+', '+S.days.length+' days'+(S.manual?'':', '+S.iv+'-minute readings, channels '+S.eK.concat(S.bK).join(' ')));
+  L.push('House: phase '+o.phase+', hot water '+o.hws+', solar '+(o.hasSolar==='yes'?o.solarKw+' kW':'no')+', battery '+($('hasBat').value==='yes'?($('batKwh').value||'?')+' kWh':'no')+', EV '+o.evHas+(o.evHas==='have'?' ('+o.evSize+')':'')+', '+o.hours+' h without grid, '+o.pct+'th percentile day');
+  if(FIND.length)L.push('Noticed in file: '+FIND.map(f=>f.k+' = '+f.ans).join('; '));
+  L.push('Result: battery '+fmt(SZ.kwh,1)+' kWh, inverter '+fmt(SZ.kNeed,1)+' kW, '+SZ.phase+' phase, solar '+fmt(SZ.solar,1)+' kW'+(SZ.solarKw>0?' (existing '+SZ.solarKw+' kW)':''));
+  L.push('Design day '+fmt(SZ.design,1)+' kWh, busiest day '+fmt(SZ.worst,1)+' kWh, peak '+fmt(SZ.peakKw,1)+' kW, average day '+fmt(avg(SZ.dsT),1)+' kWh');
+  if(SZ.cx.used)L.push('Circuits entered: '+SZ.cx.rows.map(c=>c.k+(c.bk==='off'?' off':' on')).join(', '));
+  return L.join('\n')}
+function fbRefresh(){const sum=fbSummary(),c=($('fbText').value||'').trim();$('fbSum').value=(c?'My comment: '+c+'\n\n':'')+sum;
+  const body=(c?'My comment: '+c.slice(0,700)+'\n\n':'')+sum+'\n\n(Sent from the battery sizing page. Copy the summary from the page if this is cut short.)';
+  $('fbMail').href='mailto:'+FB_TO+'?subject='+encodeURIComponent(FB_SUBJ)+'&body='+encodeURIComponent(body)}
+$('fbText').addEventListener('input',fbRefresh);
+$('fbCopy').addEventListener('click',()=>{fbRefresh();const done=m=>{$('fbDone').textContent=m;setTimeout(()=>{$('fbDone').textContent=''},3000)};
+  try{navigator.clipboard.writeText($('fbSum').value).then(()=>done('Copied.'),()=>{$('fbSum').select();done('Select and copy the text above.')})}catch(e){$('fbSum').select();done('Select and copy the text above.')}});
 
 /* ---------- manual entry from a bill ---------- */
 function tmin(s){const q=String(s||'').split(':').map(Number);return(q[0]||0)*60+(q[1]||0)}
