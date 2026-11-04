@@ -703,7 +703,7 @@ $('findings').addEventListener('change',e=>{const i=e.target.dataset.fi;if(i===u
 
 
 /* ---------- feedback summary (no file data, no dates, no meter number) ---------- */
-const FB_TO='acmkuiper+nem12feedback@gmail.com',FB_SUBJ='NEM12 battery sizing page: feedback on my result';
+const FB_TO='acmkuiper@gmail.com',FB_SUBJ='NEM12 battery sizing page: feedback on my result';
 function fbSummary(){
   if(!S||!SZ)return'';const o=readOpts(),L=[];
   L.push('Source: '+(S.manual?'typed-in bill figures ('+$('srcMode').value+')':isSample?'example house':'NEM12 file')+', '+S.days.length+' days'+(S.manual?'':', '+S.iv+'-minute readings, channels '+S.eK.concat(S.bK).join(' ')));
