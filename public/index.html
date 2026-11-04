@@ -221,6 +221,23 @@ details .inner{margin-top:12px;display:flex;flex-direction:column;gap:12px}
     <div id="msgs" class="msgs"></div>
   </section>
 
+  <section id="exSys" class="panel" style="display:none;margin-top:16px">
+    <h2>Your existing system</h2>
+    <p class="muted" style="font-size:13.5px">With a battery fitted, the meter file shows what you bought from the grid, not what the house uses. Tell us what you have and read a few numbers from your solar or battery app, and the page will work out what, if anything, needs adding. Your solar size and battery size are in "About the house" above.</p>
+    <div class="fields">
+      <div class="field"><label for="exGoal">What do you want to find out?</label><select id="exGoal"><option value="check">Whether what I have is enough</option><option value="battery">How much more battery I need</option><option value="inverter">Whether my inverter is big enough</option></select></div>
+      <div class="field"><label for="exInv">The inverter that runs your house in a blackout</label><select id="exInv"><option value="">Not sure / not listed</option></select></div>
+      <div class="field"><label for="exInvKw">Or its backup output rating, kW</label><input type="number" id="exInvKw" min="0" max="60" step="0.5" placeholder="from the label or app"></div>
+    </div>
+    <h3 style="margin:14px 0 4px;font-size:15px">Three readings from your app (best answer)</h3>
+    <p class="muted" style="font-size:12.5px;margin:0 0 8px">Look for "home consumption" or "load". Use a cold month if you can. Skip them and the page will estimate from the file, with a wide margin.</p>
+    <div class="fields">
+      <div class="field"><label for="exAvg">Average home use per day, kWh</label><input type="number" id="exAvg" min="0" max="500" step="0.1"></div>
+      <div class="field"><label for="exHeavy">Heaviest day, kWh</label><input type="number" id="exHeavy" min="0" max="800" step="0.1"></div>
+      <div class="field"><label for="exPeak">Highest power the house drew, kW (optional)</label><input type="number" id="exPeak" min="0" max="80" step="0.1"></div>
+      <div class="field" id="exCarWrap" style="display:none"><label for="exCarIn">Does that home use include the car charger?</label><select id="exCarIn"><option value="yes">Yes, the car is in it</option><option value="no">No, the car is separate</option></select></div>
+    </div>
+  </section>
   <section id="summary"></section>
   <section id="evidence"></section>
   <section id="method"></section>
@@ -431,7 +448,7 @@ function readCirc(){
     return{k:c.k,name:c.name,st:'yes',ty:ty[1],a,ph:g('ph').value,bk:g('bk').value,kw:kwN>0?kwN:a*0.23*ty[2]*(ty[5]||1),byName:kwN>0,p3:(ty[5]||1)===3,byKh:khN!==null,khDay:khN!==null?khN:(c.k==='ev'?evDefKwh():ty[3])}}).filter(Boolean)}
 function haveEvCirc(o){o.carDay=0;if(o.evHas!=='have')return;
   const kw=o.evChg==='unsure'?(o.phase==='single'?7.4:11):+o.evChg;o.carDay=o.evSize==='house'?o.evPer*o.evWk/7:0;
-  const row={k:'ev',name:'EV charger',st:'yes',ty:'ev',a:Math.round(kw*1000/230),ph:'?',bk:o.evSize==='house'?'off':'on',kw,byName:true,p3:kw>=10,noCut:true,byKh:o.evSize==='house',khDay:o.evSize==='house'?o.evPer:0};
+  const row={k:'ev',name:'EV charger',st:'yes',ty:'ev',a:Math.round(kw*1000/230),ph:'?',bk:o.evSize==='house'?'off':'on',kw,byName:true,p3:kw>=10,noCut:true,byKh:o.evSize==='house'&&!(EXM&&EXM.mode==='app'&&EXM.carIn==='no'),khDay:(o.evSize==='house'&&!(EXM&&EXM.mode==='app'&&EXM.carIn==='no'))?o.evPer:0};
   const i=o.circ.findIndex(c=>c.k==='ev');if(i>=0)o.circ[i]=row;else o.circ.push(row)}
 function applyCirc(o,peakKw,hr,design,hasCL){
   const out={used:false,msgs:[],rows:[],removeKwh:0,cutKw:0,floorKw:0,ph:{}};const cs=(o.circ||[]).filter(c=>c.st==='yes');
@@ -453,7 +470,7 @@ function sizing(S,o){
   const cx=applyCirc(o,0,0,designRaw,hasCL);
   const design=cx.used?Math.max(designRaw*0.4,designRaw-cx.removeKwh):designRaw;
   const kwhRaw=design*(o.hours/24)*1.10,kwh=Math.ceil(kwhRaw*2)/2;   // always round the battery requirement up to the next 0.5 kWh
-  const hr=S.iv<=5?1.1:S.iv<=15?1.2:1.3;
+  const hr=S.hr||(S.iv<=5?1.1:S.iv<=15?1.2:1.3);
   let pk=0;for(let i=0;i<Lb.length;i++)if(Lb[i]>pk)pk=Lb[i];
   const peakKw=pk*60/S.iv,kNeedMeter=peakKw*hr;
   let kNeed=kNeedMeter,circNote='';
@@ -533,8 +550,64 @@ function profileChart(a,b){
 /* ---------- render ---------- */
 let S=null,SZ=null,sourceName='',isSample=true;
 function readOpts(){return{phase:$('phase').value,hws:$('hws').value,scope:$('scope').value,hours:Math.max(6,Math.min(96,+$('hours').value||24)),pct:+$('pct').value,hasSolar:$('hasSolar').value,solarKw:Math.max(0,Math.min(40,+$('solarKw').value||0)),evHas:$('evHas').value,evKm:Math.max(0,+$('evKm').value||0),evUnit:$('evUnit').value,evWhen:$('evWhen').value,evChg:$('evChg').value,evSize:$('evSize').value,evPer:Math.max(0,+$('evPer').value||0),evWk:Math.max(0,+$('evWk').value||0)}}
+
+/* ---------- existing system (battery already installed) ---------- */
+let EXM=null,SEff=null;
+(function(){const s=$('exInv'),g={};D.inv.forEach((i,k)=>{(g[i.m]=g[i.m]||[]).push([k,i])});
+  Object.keys(g).sort().forEach(m=>{const og=document.createElement('optgroup');og.label=m;g[m].forEach(([k,i])=>{const o=document.createElement('option');o.value=k;o.textContent=i.s+' '+i.ac+' kW, '+(i.ph===3?'three':'single')+' phase (backup '+fmt(Math.min(i.ac,i.bk||i.ac),1)+' kW)';og.appendChild(o)});s.appendChild(og)})})();
+function synthSeries(SB,avg,heavy,peakKw,pkGiven){
+  const n=48,nd=SB.days.length>=14?SB.days.length:90;let days;
+  if(SB.days.length>=14)days=SB.days;else{days=[];const st=Date.now()-nd*864e5;for(let d=0;d<nd;d++){const x=new Date(st+d*864e5);days.push(x.getUTCFullYear()+String(x.getUTCMonth()+1).padStart(2,'0')+String(x.getUTCDate()).padStart(2,'0'))}}
+  const b=[];for(let i=0;i<48;i++)b.push(i<12?.35:i<18?.9:i<32?.7:i<35?1:i<41?2.2:i<44?1.2:.6);
+  b[37]=0;const rest=b.reduce((a,x)=>a+x,0);const share=pkGiven?Math.max(0.04,Math.min(0.45,peakKw*0.5/heavy)):0.10;b[37]=share*rest/(1-share);
+  const bs=b.reduce((a,x)=>a+x,0),N=nd*n,tot=new Float64Array(N),light=Math.max(0.3*avg,(avg-0.2*heavy)/0.8);
+  for(let d=0;d<nd;d++){const day=(d%5===4)?heavy:light;for(let i=0;i<n;i++)tot[d*n+i]=day*b[i]/bs}
+  return{iv:30,n,days,N,tot,gen:new Float64Array(N),per:{E1:tot},eK:['E1'],bK:[],gaps:0,bad:0,skipped:[],manual:true,existing:true,hr:pkGiven?1.15:1.3}}
+function exSeries(SB,o){
+  EXM=null;if($('hasBat').value!=='yes'||SB.manual)return null;
+  const e={avg:+$('exAvg').value||0,heavy:+$('exHeavy').value||0,peak:+$('exPeak').value||0,carIn:$('exCarIn').value,goal:$('exGoal').value};
+  const ivIdx=$('exInv').value,iv=ivIdx===''?null:D.inv[+ivIdx],typed=+$('exInvKw').value||0;
+  const invKw=typed>0?typed:iv?Math.min(iv.ac,iv.bk||iv.ac):0;
+  const carDay=o.evPer*o.evWk/7;let avg,heavy,peak=0,pkGiven=false,mode,info={};
+  if(e.avg>0&&e.heavy>0){mode='app';avg=e.avg;heavy=Math.max(e.heavy,e.avg);if(e.peak>0){peak=e.peak;pkGiven=true}
+    if(o.evHas==='have'&&e.carIn==='no'&&o.evSize==='car'){heavy+=o.evPer;avg+=carDay}}
+  else{const sk=$('hasSolar').value==='yes'?+$('solarKw').value||0:0;
+    if(!(sk>0&&SB.bK.length&&sum(SB.gen)>0)){EXM={mode:'need',invKw,iv};return'need'}
+    mode='estimate';const n=SB.n,g=new Map();
+    SB.days.forEach((d,di)=>{let im=0,ex=0;for(let i=0;i<n;i++){im+=SB.tot[di*n+i];ex+=SB.gen[di*n+i]}const m=+d.slice(4,6)-1,k=d.slice(0,6),y=MONTH_YIELD[m]*sk;
+      if(!g.has(k))g.set(k,{m,hi:0,lo:0,c:0});const r=g.get(k);r.hi+=Math.max(0,y+im-ex);r.lo+=Math.max(0,0.85*y+im-ex);r.c++});
+    let best=null;g.forEach(r=>{if(r.c>=10&&(!best||r.hi/r.c>best.hi/best.c))best=r});
+    if(!best){let hi=0,lo=0,c=0;g.forEach(r=>{hi+=r.hi;lo+=r.lo;c+=r.c});best={m:5,hi,lo,c}}
+    avg=best.hi/best.c;heavy=1.3*avg;info={low:best.lo/best.c,high:avg,mon:best.m,days:best.c}}
+  EXM=Object.assign({mode,avg,heavy,peak,pkGiven,carIn:e.carIn,goal:e.goal,invKw,iv},info);
+  return synthSeries(SB,avg,heavy,peak,pkGiven)}
+function renderNeed(){
+  SZ=null;$('msgs').innerHTML='';$('evidence').innerHTML='';$('method').innerHTML='';$('shortlist').innerHTML='';
+  $('dataChip').className='chip warn';$('dataChip').textContent='More information needed';
+  $('summary').innerHTML='<div class="panel"><h2>We need a little more to size this</h2><p>You have a battery, so the meter file shows what you bought from the grid, not what the house uses. The battery and the car charge from it, so it cannot be used as the house load. Pick one of these:</p><ul><li>Type the readings from your solar or battery app into <b>Your existing system</b> above (average day, heaviest day, and the highest power if you have it).</li><li>Or enter your solar panel size in <b>About the house</b>, and the page will estimate the house use from the file, using solar production, grid import and export. That is rougher.</li></ul></div>';
+  fbRefresh()}
+function exInvStat(){const x=EXM;if(!x||!(x.invKw>0))return'<div class="stat"><span class="k">Your inverter</span><span class="v" style="font-size:22px">Not given</span><span class="w">Choose it or type its backup rating above to compare with the '+fmt(SZ.kNeed,1)+' kW needed.</span></div>';
+  const ok=x.invKw>=SZ.kNeed;return`<div class="stat"><span class="k">Your inverter</span><span class="v" style="font-size:24px">${ok?'Big enough':'Short by '+fmt(SZ.kNeed-x.invKw,1)+' kW'}</span><span class="w">It supplies ${fmt(x.invKw,1)} kW in a blackout. The house needs ${fmt(SZ.kNeed,1)} kW.</span></div>`}
+function exAddOns(iv,add){const rows=[];D.bat.filter(b=>b.m===iv.m&&(!b.only||b.only.some(p=>iv.id.startsWith(p)))&&(!b.no||!b.no.some(p=>iv.id.startsWith(p)))&&(!b.vc||!iv.vc||b.vc===iv.vc)&&!(b.vr&&iv.vr&&(b.vr[0]<iv.vr[0]||b.vr[1]>iv.vr[1]))).forEach(b=>{const q=Math.max(b.min||1,Math.ceil(add/b.kwh));if(q<=b.max)rows.push({b,q,kwh:q*b.kwh})});rows.sort((a,b)=>a.kwh-b.kwh);return rows.slice(0,4)}
+function exPanel(){const x=EXM,L=[];
+  const bat=SZ.exBat<=0?'Battery: enter the usable size of your battery in "About the house" to compare it with the '+fmt(SZ.kwh,1)+' kWh needed.':SZ.exBat>=SZ.kwh?'Battery: your '+fmt(SZ.exBat,1)+' kWh covers '+SZ.hours+' hours on a heavy day (about '+fmt(SZ.kwh,1)+' kWh needed).':'Battery: you have '+fmt(SZ.exBat,1)+' kWh. About '+fmt(SZ.addKwh,1)+' kWh more is needed to cover '+SZ.hours+' hours on a heavy day ('+fmt(SZ.kwh,1)+' kWh in total).';
+  const inv=!(x.invKw>0)?'Inverter: choose yours above, or type its backup rating, to compare it with the '+fmt(SZ.kNeed,1)+' kW needed.':x.invKw>=SZ.kNeed?'Inverter: yours supplies '+fmt(x.invKw,1)+' kW in a blackout, enough for the '+fmt(SZ.kNeed,1)+' kW needed.':'Inverter: yours supplies '+fmt(x.invKw,1)+' kW in a blackout, '+fmt(SZ.kNeed-x.invKw,1)+' kW short of the '+fmt(SZ.kNeed,1)+' kW needed. Leaving big loads off in a blackout (see Your circuits) lowers the requirement.';
+  const ord=x.goal==='inverter'?[inv,bat]:[bat,inv];
+  let h='<div class="panel" style="margin-top:12px"><h3 style="margin:0 0 6px">Your system against what the house needs</h3>'+ord.map(s=>'<p style="margin:4px 0">'+esc(s)+'</p>').join('');
+  if(SZ.exBat>0&&SZ.addKwh>0&&x.iv&&!(RK[x.iv.m]&&RK[x.iv.m].ex)){const rows=exAddOns(x.iv,SZ.addKwh);
+    h+=rows.length?'<p style="margin:10px 0 4px"><b>Batteries that suit your '+esc(x.iv.m)+' inverter</b> (check with your installer that they can be mixed with your existing battery, and what its maximum is):</p><div class="scroll"><table><tr><th>Battery</th><th class="n">Modules to add</th><th class="n">kWh added</th></tr>'+rows.map(r=>'<tr><td>'+esc((r.b.id.toLowerCase().startsWith(r.b.brand.toLowerCase())?r.b.id:r.b.brand+' '+r.b.id))+'</td><td class="n">'+r.q+'</td><td class="n">'+fmt(r.kwh,1)+'</td></tr>').join('')+'</table></div>':'<p class="muted" style="margin:8px 0 0">No battery in our list is listed as compatible with that inverter, so ask the maker or installer.</p>'}
+  if(x.invKw>0&&x.invKw<SZ.kNeed)h+='<p class="muted" style="margin:10px 0 0;font-size:13px">If the inverter must be replaced, the shortlist further down shows complete new systems that meet both numbers.</p>';
+  return h+'</div>'}
 function run(){
-  if(!S)return;const o=readOpts();if(o.hasSolar!=='yes')o.solarKw=0;if(o.evHas!=='plan')o.evKm=0;syncEvCirc(o);o.circ=readCirc();haveEvCirc(o);SZ=sizing(S,o);const msgs=[];
+  const SB=S;if(!SB)return;let eff=null;
+  const o0=Object.assign(readOpts(),{});
+  $('exSys').style.display=$('hasBat').value==='yes'?'':'none';$('exCarWrap').style.display=$('evHas').value==='have'?'':'none';
+  try{eff=exSeries(SB,o0)}catch(e){eff=null;EXM=null}
+  if(eff==='need'){renderNeed();return}
+  try{if(eff)S=eff;SEff=S;run0()}finally{S=SB}}
+
+function run0(){
+  if(!S)return;const o=readOpts();if(o.hasSolar!=='yes'||S.existing)o.solarKw=0;if(o.evHas!=='plan')o.evKm=0;syncEvCirc(o);o.circ=readCirc();haveEvCirc(o);SZ=sizing(S,o);const msgs=[];
   {const fw=id=>$(id).closest('.field'),sS=o.hasSolar==='yes',sE=o.evHas==='plan',sH=o.evHas!=='no';fw('solarKw').style.display=sS?'':'none';fw('evKm').style.display=sE?'':'none';fw('evWhen').style.display=sE?'':'none';$('evChgWrap').style.display=sH?'':'none';$('evModelWrap').style.display=sH?'':'none';$('evSizeWrap').style.display=o.evHas==='have'?'':'none';$('evPerWrap').style.display=(o.evHas==='have'&&o.evSize==='house')?'':'none'}
   $('batKwhWrap').style.display=$('hasBat').value==='yes'?'':'none';
   SZ.exBat=$('hasBat').value==='yes'?Math.max(0,+$('batKwh').value||0):0;SZ.addKwh=Math.max(0,Math.ceil((SZ.kwh-SZ.exBat)*2)/2);
@@ -542,7 +615,7 @@ function run(){
   $('dataChip').className='chip'+(isSample?' warn':' good');
   $('dataChip').textContent=isSample?'Example data, upload yours to replace':'Using '+sourceName;
   if(SZ.sol){const q=SZ.sol,tot=avg(SZ.dsT);msgs.push('Existing '+o.solarKw+' kW solar: it is estimated to produce about '+q.genDay.toFixed(1)+' kWh a day on average'+(S.bK.length?', of which about '+q.expDay.toFixed(1)+' kWh is exported (from the file)':'')+'. About '+q.addDay.toFixed(1)+' kWh a day ('+Math.round(100*q.addDay/tot)+'% of the estimated household use of '+tot.toFixed(1)+' kWh a day) was used straight away and is hidden by net metering, so it has been added back. '+(S.bK.length?'':'The file has no export channel, so 40% of generation is assumed used on site. ')+'Generation is a typical Adelaide estimate, not measured. This page is for houses with no solar or solar only, with no battery fitted yet.')}
-  else if(S.bK.length||o.hasSolar==='yes')msgs.push('This file includes solar export or you have solar installed. The meter then shows net use, so the real household load is higher than shown and every size below is a minimum. Enter the size of your existing solar (kW of panels) and the daytime use will be estimated and added back.');
+  else if(!S.existing&&(S.bK.length||o.hasSolar==='yes'))msgs.push('This file includes solar export or you have solar installed. The meter then shows net use, so the real household load is higher than shown and every size below is a minimum. Enter the size of your existing solar (kW of panels) and the daytime use will be estimated and added back.');
   if(SZ.evDay>0)msgs.push('EV: '+o.evKm+' km '+(o.evUnit==='week'?'a week':'a day')+' at '+fmt(evEff()*100,0)+' kWh per 100 km'+($('evModel').value!==''?(D.ev[+$('evModel').value].g?' (average of the models in the list, rated range plus 15% for real driving)':' ('+D.ev[+$('evModel').value].m+' '+D.ev[+$('evModel').value].n+', rated range plus 15% for real driving)'):'')+' is about '+SZ.evDay.toFixed(1)+' kWh a day. '+(SZ.evWhen==='solar'?'Charging from solar, so this was added to the solar target. ':'Charging overnight from the grid at off-peak, so no extra solar is needed. ')+'The planned EV is not counted in the backup battery or inverter size.');
   if(o.evHas==='have'){if(o.evSize==='house')msgs.push('Sized for the house only. Your car is left off in a blackout, so about '+fmt(o.evPer,0)+' kWh for each of '+fmt(o.evWk,1)+' charges a week ('+fmt(SZ.carDay,1)+' kWh a day on average) was taken out of the battery and solar sizes, but the inverter size is not reduced for it, because your highest power may not be the car charging. Choose "The house plus the car" if the car must keep charging when the grid is off.');
     else msgs.push('Sized for the house plus the car. The car charging in your meter file is kept in the battery and solar sizes, and the inverter allows for the charger running at the same time ('+fmt(SZ.cx.rows.filter(c=>c.k==='ev').map(c=>c.kw)[0]||0,1)+' kW). This gives much larger sizes than the house alone needs.')}
@@ -550,7 +623,7 @@ function run(){
     if(o.evHas==='plan'&&SZ.evDay>0)msgs.push('Charging about '+SZ.evDay.toFixed(1)+' kWh a day at '+(o.evChg==='unsure'?'a typical ':'')+fmt(cr,1)+' kW takes about '+fmt(SZ.evDay/cr,1)+' hours of charging on an average day.');
     if(cr>=11&&o.phase==='single')msgs.push('An 11 kW charger needs a three phase supply. On single phase the most a home charger can usually deliver is about 7 kW.');}
   if(!S.manual&&FIND.length&&FIND.some(f=>f.ans!=='other'))msgs.push('Your file shows patterns that point to a battery or an electric vehicle charging from the grid (see "We noticed some things in your file"). The meter counts that charging as house use, so the sizes below are probably larger than the house itself needs. Treat them as upper limits.');
-  if(S.manual)msgs.push('These sizes come from bill totals, not meter readings. The busiest day and the highest power are estimated from a typical household pattern (the busiest day about 30% above average and the highest half hour about 10% of a day\'s use), so they are rougher than a NEM12 file. If you can get your NEM12 file, it will be more accurate.');
+  if(S.manual&&!S.existing)msgs.push('These sizes come from bill totals, not meter readings. The busiest day and the highest power are estimated from a typical household pattern (the busiest day about 30% above average and the highest half hour about 10% of a day\'s use), so they are rougher than a NEM12 file. If you can get your NEM12 file, it will be more accurate.');
   if(o.hws==='cl'&&!S.per.E2&&!S.manual)msgs.push('You said hot water is on controlled load, but the file has no E2 channel, so nothing was removed from the backup load.');
   if(S.days.length<30&&!S.manual)msgs.push('Only '+S.days.length+' days of data. Use at least a full winter month for a reliable result.');
   if(SZ.assumed)msgs.push('The file has no June to August data. Solar is sized with a typical June yield on your average load. Winter loads are usually higher, so treat it as a minimum.');
@@ -568,7 +641,8 @@ function run(){
     if(o.phase!=='single'&&kn.length>1)msgs.push('Your backed-up circuits sit on different phases ('+kn.map(k=>'phase '+k+': '+fmt(cx.ph[k],1)+' kW').join(', ')+'). A single phase backup unit can only supply one phase, so you need three phase backup, or an electrician to move them onto one phase.');
     else if(o.phase!=='single'&&kn.length===1&&cx.ph['?'])msgs.push('Some backed-up circuits have an unknown phase. Check them if you are considering single phase backup on a three phase home.')}
   $('circSum').textContent=SZ.cx.used?('Using '+SZ.cx.rows.length+' circuit'+(SZ.cx.rows.length>1?'s':'')+': inverter '+fmt(SZ.kNeed,1)+' kW, battery '+fmt(SZ.kwh,1)+' kWh usable.'):'';
-  if($('hasBat').value==='yes'){
+  if(S.existing){const x=EXM;msgs.push(x.mode==='app'?'Existing system mode: sized from the home-use readings you typed from your app, not from the meter file, because the meter only shows what you bought from the grid.':'Existing system mode, estimated: house use was worked out from the file as grid import minus export plus an assumed solar production for your '+fmt(+$('solarKw').value||0,1)+' kW of panels (between '+fmt(x.low,1)+' and '+fmt(x.high,1)+' kWh a day in the busiest month). This is rough, and a reading from your app will be far better. Battery losses and unseen loads are not separated.');if(x.mode==='app'&&!x.pkGiven)msgs.push('You did not give the highest power the house drew, so the inverter size is estimated from the heavy day. Add it for a firmer answer.');}
+  else if($('hasBat').value==='yes'){
     msgs.push('With a battery installed, the meter file only shows what the house drew from the grid, because the battery supplied part of the load. The real household use is higher than the file shows, so every size here is a minimum. If you can, use a file from before the battery was installed, or add the extra use from your battery app.');
     if(SZ.exBat<=0)msgs.push('You said you have a battery. Enter its usable size in kWh (on the label, invoice or in the monitoring app) so the extra needed can be worked out.');
     else if(SZ.exBat>=SZ.kwh)msgs.push('Your existing '+fmt(SZ.exBat,1)+' kWh battery already meets the '+fmt(SZ.kwh,1)+' kWh needed. Check its power rating too: an older battery or inverter may not supply the '+fmt(SZ.kNeed,1)+' kW backup power needed.');
@@ -579,14 +653,16 @@ function run(){
   const sz2=Object.assign({},SZ,{phase});
   // summary
   const ph3=phase==='three';
-  $('summary').innerHTML=`<div><h2>What your house needs</h2><p class="muted" style="font-size:13.5px">${S.manual?S.days.length+' days, estimated from the bill figures you typed in.':S.days.length+' days, '+S.iv+'-minute readings, channels '+esc(chs)+'.'}</p></div>
+  $('summary').innerHTML=`<div><h2>What your house needs</h2><p class="muted" style="font-size:13.5px">${S.existing?'Based on '+(EXM.mode==='app'?'the readings you typed from your app.':'an estimate from your file and solar size.'):S.manual?S.days.length+' days, estimated from the bill figures you typed in.':S.days.length+' days, '+S.iv+'-minute readings, channels '+esc(chs)+'.'}</p></div>
   <div class="stats">
    <div class="stat"><span class="k">Battery</span><span class="v">${fmt(SZ.kwh,1)}<small>kWh usable</small></span><span class="w">${SZ.hours} hours without grid on a heavy day (${fmt(SZ.design,1)} kWh) plus 10%.</span></div>
    ${SZ.exBat>0?`<div class="stat"><span class="k">Extra battery</span><span class="v">${fmt(SZ.addKwh,1)}<small>kWh to add</small></span><span class="w">You have ${fmt(SZ.exBat,1)} kWh of the ${fmt(SZ.kwh,1)} kWh needed.</span></div>`:''}
    <div class="stat"><span class="k">Inverter</span><span class="v">${fmt(SZ.kNeed,1)}<small>kW backup</small></span><span class="w">Peak ${fmt(SZ.peakKw,1)} kW with headroom for short spikes.</span></div>
+   ${S.existing?exInvStat():''}
    <div class="stat"><span class="k">Supply</span><span class="v" style="font-size:24px">${ph3?'Three phase':'Single phase'}</span><span class="w">${SZ.singleBlocked?'Single phase cannot carry this peak (10 kW limit).':ph3?(o.phase==='three'?'As you stated.':'Chosen from the peak load.'):(o.phase==='single'?'As you stated.':'Peak fits within one phase.')}</span></div>
-   <div class="stat"><span class="k">Solar</span><span class="v">${SZ.solarKw>0?fmt(Math.max(0,SZ.solar-SZ.solarKw),1)+'<small>kW to add</small>':fmt(SZ.solar,1)+'<small>kW of panels</small>'}</span><span class="w">${SZ.solarKw>0?(SZ.solar>SZ.solarKw?'Target '+fmt(SZ.solar,1)+' kW in total, you have '+fmt(SZ.solarKw,1)+' kW. ':'Your '+fmt(SZ.solarKw,1)+' kW already meets the '+fmt(SZ.solar,1)+' kW target. '):''}Sized for ${SZ.assumed?'a typical June':MON[SZ.dm.mon]} with ${fmt(SZ.dm.mean,1)} kWh a day of use.</span></div>
+   <div class="stat solarStat"><span class="k">Solar</span><span class="v">${SZ.solarKw>0?fmt(Math.max(0,SZ.solar-SZ.solarKw),1)+'<small>kW to add</small>':fmt(SZ.solar,1)+'<small>kW of panels</small>'}</span><span class="w">${SZ.solarKw>0?(SZ.solar>SZ.solarKw?'Target '+fmt(SZ.solar,1)+' kW in total, you have '+fmt(SZ.solarKw,1)+' kW. ':'Your '+fmt(SZ.solarKw,1)+' kW already meets the '+fmt(SZ.solar,1)+' kW target. '):''}Sized for ${SZ.assumed?'a typical June':MON[SZ.dm.mon]} with ${fmt(SZ.dm.mean,1)} kWh a day of use.</span></div>
   </div>`;
+  if(S.existing){const ss=$('summary').querySelector('.solarStat');if(ss)ss.remove();$('summary').insertAdjacentHTML('beforeend',exPanel())}
   // evidence
   const pks=topPeaks(SZ.tot,S,3);
   const ds=SZ.dsT;const order=Array.from(ds.keys()).sort((a,b)=>ds[b]-ds[a]).slice(0,10);
@@ -706,7 +782,7 @@ $('findings').addEventListener('change',e=>{const i=e.target.dataset.fi;if(i===u
 const FB_TO='acmkuiper@gmail.com',FB_SUBJ='NEM12 battery sizing page: feedback on my result';
 function fbSummary(){
   if(!S||!SZ)return'';const o=readOpts(),L=[];
-  L.push('Source: '+(S.manual?'typed-in bill figures ('+$('srcMode').value+')':isSample?'example house':'NEM12 file')+', '+S.days.length+' days'+(S.manual?'':', '+S.iv+'-minute readings, channels '+S.eK.concat(S.bK).join(' ')));
+  L.push('Source: '+(S.existing?'existing system, '+(EXM.mode==='app'?'app readings: avg '+fmt(EXM.avg,1)+' kWh, heaviest '+fmt(EXM.heavy,1)+' kWh, peak '+(EXM.pkGiven?fmt(EXM.peak,1)+' kW':'not given')+', car in readings '+EXM.carIn:'estimated from file'):S.manual?'typed-in bill figures ('+$('srcMode').value+')':isSample?'example house':'NEM12 file')+', '+S.days.length+' days'+(S.manual||S.existing?'':', '+S.iv+'-minute readings, channels '+S.eK.concat(S.bK).join(' ')));
   L.push('House: phase '+o.phase+', hot water '+o.hws+', solar '+(o.hasSolar==='yes'?o.solarKw+' kW':'no')+', battery '+($('hasBat').value==='yes'?($('batKwh').value||'?')+' kWh':'no')+', EV '+o.evHas+(o.evHas==='have'?' ('+o.evSize+')':'')+', '+o.hours+' h without grid, '+o.pct+'th percentile day');
   if(FIND.length)L.push('Noticed in file: '+FIND.map(f=>f.k+' = '+f.ans).join('; '));
   L.push('Result: battery '+fmt(SZ.kwh,1)+' kWh, inverter '+fmt(SZ.kNeed,1)+' kW, '+SZ.phase+' phase, solar '+fmt(SZ.solar,1)+' kW'+(SZ.solarKw>0?' (existing '+SZ.solarKw+' kW)':''));
@@ -758,7 +834,7 @@ $('file').addEventListener('change',e=>{const f=e.target.files[0];if(!f)return;f
 const drop=$('drop');['dragenter','dragover'].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.add('over')}));
 ['dragleave','drop'].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.remove('over')}));
 drop.addEventListener('drop',e=>{const f=e.dataTransfer.files[0];if(f)f.text().then(t=>load(t,f.name,false))});
-['evSize','evChg','hasBat','phase','hws','scope','hours','pct','hasSolar','solarKw','evHas','evKm','evUnit','evWhen'].forEach(id=>$(id).addEventListener('change',run));buildTar();(function(){const s=$('evModel');D.ev.forEach((e,i)=>{const o=document.createElement('option');o.value=i;o.textContent=e.g?'Average new EV, not sure which ('+e.b+' kWh, about '+e.km+' km)':e.m+' '+e.n+' ('+e.b+' kWh)';s.appendChild(o)});s.addEventListener('change',()=>{const v=s.value;if(v!==''){const e=D.ev[+v];$('evChg').value=e.g?'unsure':e.ac>=10?'11':'7.4';evTyTouched=false}run()})})();$('dlRpt').addEventListener('click',()=>{try{window.print()}catch(e){alert('Use your browser Print command and choose Save as PDF.')}});$('tarDet').addEventListener('input',e=>{const el=e.target;if(el.dataset.f==='p'&&el.dataset.t==='u'&&TOU.find(r=>r.k===el.dataset.k&&r.of))el.dataset.own=el.value===''?'':'1';syncTar();saveTar()});$('tarDet').addEventListener('change',()=>{syncTar();saveTar()});buildCirc();$('circBox').addEventListener('change',e=>{if(e.target.matches('[data-c=ev] [data-f=ty]'))evTyTouched=true;syncCirc();run()});$('circBox').addEventListener('input',e=>{if(e.target.type==='number')run()});$('solarKw').addEventListener('input',run);$('batKwh').addEventListener('input',run);$('evKm').addEventListener('input',run);$('evPer').addEventListener('input',run);$('evWk').addEventListener('input',run);
+['evSize','evChg','hasBat','phase','hws','scope','hours','pct','hasSolar','solarKw','evHas','evKm','evUnit','evWhen'].forEach(id=>$(id).addEventListener('change',run));buildTar();(function(){const s=$('evModel');D.ev.forEach((e,i)=>{const o=document.createElement('option');o.value=i;o.textContent=e.g?'Average new EV, not sure which ('+e.b+' kWh, about '+e.km+' km)':e.m+' '+e.n+' ('+e.b+' kWh)';s.appendChild(o)});s.addEventListener('change',()=>{const v=s.value;if(v!==''){const e=D.ev[+v];$('evChg').value=e.g?'unsure':e.ac>=10?'11':'7.4';evTyTouched=false}run()})})();$('dlRpt').addEventListener('click',()=>{try{window.print()}catch(e){alert('Use your browser Print command and choose Save as PDF.')}});$('tarDet').addEventListener('input',e=>{const el=e.target;if(el.dataset.f==='p'&&el.dataset.t==='u'&&TOU.find(r=>r.k===el.dataset.k&&r.of))el.dataset.own=el.value===''?'':'1';syncTar();saveTar()});$('tarDet').addEventListener('change',()=>{syncTar();saveTar()});buildCirc();$('circBox').addEventListener('change',e=>{if(e.target.matches('[data-c=ev] [data-f=ty]'))evTyTouched=true;syncCirc();run()});$('circBox').addEventListener('input',e=>{if(e.target.type==='number')run()});$('solarKw').addEventListener('input',run);['exGoal','exInv','exCarIn'].forEach(id=>$(id).addEventListener('change',run));['exInvKw','exAvg','exHeavy','exPeak'].forEach(id=>$(id).addEventListener('input',run));$('batKwh').addEventListener('input',run);$('evKm').addEventListener('input',run);$('evPer').addEventListener('input',run);$('evWk').addEventListener('input',run);
 window.__BS={parseNEM12,buildSeries,sizing,recommend,load,get S(){return S},get SZ(){return SZ}};
 load(sample(),'example',true);
 })();
