@@ -152,6 +152,7 @@ details .inner{margin-top:12px;display:flex;flex-direction:column;gap:12px}
           <input type="file" id="file" accept=".csv,.txt,text/csv">
         </label>
         <div id="fileStatus" class="muted" style="font-size:13px"></div>
+        <div id="findings" style="display:none"></div>
       </div>
       <div class="panel" style="display:flex;flex-direction:column;gap:12px">
         <div><h2>About the house</h2></div>
@@ -541,6 +542,7 @@ function run(){
   if(o.evHas!=='no'){const cr=o.evChg==='unsure'?(o.phase==='single'?7.4:11):+o.evChg;
     if(o.evHas==='plan'&&SZ.evDay>0)msgs.push('Charging about '+SZ.evDay.toFixed(1)+' kWh a day at '+(o.evChg==='unsure'?'a typical ':'')+fmt(cr,1)+' kW takes about '+fmt(SZ.evDay/cr,1)+' hours of charging on an average day.');
     if(cr>=11&&o.phase==='single')msgs.push('An 11 kW charger needs a three phase supply. On single phase the most a home charger can usually deliver is about 7 kW.');}
+  if(!S.manual&&FIND.length&&FIND.some(f=>f.ans!=='other'))msgs.push('Your file shows patterns that point to a battery or an electric vehicle charging from the grid (see "We noticed some things in your file"). The meter counts that charging as house use, so the sizes below are probably larger than the house itself needs. Treat them as upper limits.');
   if(S.manual)msgs.push('These sizes come from bill totals, not meter readings. The busiest day and the highest power are estimated from a typical household pattern (the busiest day about 30% above average and the highest half hour about 10% of a day\'s use), so they are rougher than a NEM12 file. If you can get your NEM12 file, it will be more accurate.');
   if(o.hws==='cl'&&!S.per.E2&&!S.manual)msgs.push('You said hot water is on controlled load, but the file has no E2 channel, so nothing was removed from the backup load.');
   if(S.days.length<30&&!S.manual)msgs.push('Only '+S.days.length+' days of data. Use at least a full winter month for a reliable result.');
@@ -649,11 +651,47 @@ $('resetRank').onclick=()=>{try{localStorage.removeItem('bs_rank_v1')}catch(e){}
 
 let FILE=null;
 function load(text,name,isS){
-  try{const p=parseNEM12(text);S=buildSeries(p);sourceName=name;isSample=isS;FILE={S,name,isS};$('srcMode').value='nem12';setMode();
+  try{const p=parseNEM12(text);S=buildSeries(p);sourceName=name;isSample=isS;FILE={S,name,isS,find:isS?[]:detect(S)};$('srcMode').value='nem12';setMode();renderFind(FILE.find);
     if(!isS){$('hws').value=S.per.E2?'cl':'none';$('hasSolar').value=S.bK.length?'yes':'no'}
     $('fileStatus').textContent=isS?'Showing a generated example household.':name+': '+S.days.length+' days loaded.';run()}
   catch(err){$('fileStatus').textContent='';$('msgs').innerHTML='<div class="banner">'+esc(err.message)+'</div>'}
 }
+
+
+/* ---------- patterns in the meter file that point to a battery or EV already on site ---------- */
+let FIND=[];
+function medOf(a){const s=a.slice().sort((x,y)=>x-y);return s.length?s[Math.floor(s.length/2)]:0}
+function detect(S){
+  const n=S.n,nd=S.days.length,per=60/S.iv,out=[];if(nd<14)return out;
+  const H=new Float64Array(nd*24),X=new Float64Array(nd*24);
+  for(let d=0;d<nd;d++)for(let i=0;i<n;i++){const h=Math.floor(i/per);H[d*24+h]+=S.tot[d*n+i];X[d*24+h]+=S.gen[d*n+i]}
+  const nk=[],dk=[];
+  for(let d=0;d<nd;d++){const a=H.subarray(d*24,d*24+24);let h=0;
+    while(h<24){if(a[h]>=1.8){let e=h;while(e+1<24&&a[e+1]>=1.8)e++;const len=e-h+1;
+      if(len>=3){const mid=Array.from(a.slice(h+1,e)),mx=Math.max(...mid),mn=Math.min(...mid);
+        if((mx-mn)/mx<=0.15){const kwh=Array.from(a.slice(h,e+1)).reduce((x,y)=>x+y,0),kw=mid.reduce((x,y)=>x+y,0)/mid.length;
+          if(h>=21||h<=6)nk.push([kwh,kw,h,len]);else if(h>=9&&h<=15)dk.push([kwh,kw,h,len])}}
+      h=e+1}else h++}}
+  const need=Math.max(5,Math.round(nd*0.1)),pc=c=>Math.round(100*c/nd),hh=h=>String(h).padStart(2,'0')+':00';
+  const grid=S.bK.length>0&&sum(S.gen)>0;
+  if(nk.length>=need)out.push({k:'night',text:`On ${pc(nk.length)}% of days (${nk.length} days) your meter shows a steady ${fmt(medOf(nk.map(x=>x[1])),1)} kW from the grid for about ${medOf(nk.map(x=>x[3]))} hours overnight, starting around ${hh(medOf(nk.map(x=>x[2])))} (about ${fmt(medOf(nk.map(x=>x[0])),0)} kWh each time). No normal household load stays this steady.`,q:'What do you think this is?',opts:[['unsure','Not sure'],['car','An electric vehicle charging'],['battery','A home battery charging from the grid'],['other','Something else (pool pump, heating, hot water)']]});
+  if(dk.length>=need)out.push({k:'day',text:`On ${pc(dk.length)}% of days (${dk.length} days) your meter shows a steady ${fmt(medOf(dk.map(x=>x[1])),1)} kW from the grid for about ${medOf(dk.map(x=>x[3]))} hours in the middle of the day (about ${fmt(medOf(dk.map(x=>x[0])),0)} kWh each time).${grid?'':' There is also almost no solar export.'} A battery charging from cheap or free daytime power looks like this.`,q:'What do you think this is?',opts:[['unsure','Not sure'],['battery','A home battery charging from cheap or free daytime power'],['car','An electric vehicle charging'],['other','Something else (pool pump, heating, hot water)']]});
+  if(grid){
+    let pse=0,nz=0,ex1=0;
+    for(let d=0;d<nd;d++){const ds=S.days[d],y=+ds.slice(0,4),m=+ds.slice(4,6)-1,dd=+ds.slice(6,8),doy=Math.round((Date.UTC(y,m,dd)-Date.UTC(y,0,0))/864e5),dl=12+2.3*Math.cos(2*Math.PI*(doy-355)/365),ss=12.6-dl/2+dl+0.75;
+      let s=0,imp=0,exd=0;for(let i=0;i<n;i++){const t=(i+0.5)*S.iv/60;exd+=S.gen[d*n+i];if(t>=ss&&t<23)s+=S.gen[d*n+i];if(t>=17&&t<22)imp+=S.tot[d*n+i]}
+      if(s>=0.3)pse++;if(exd>=1){ex1++;if(imp<0.4)nz++}}
+    if(pse>=need)out.push({k:'sunset',text:`On ${pc(pse)}% of days (${pse} days) power was sent back to the grid after sunset. Solar cannot do that, so it usually means a battery selling stored power in the evening.`,q:'Do you have a battery?',opts:[['unsure','Not sure'],['battery','Yes, I have a battery'],['other','No']]});
+    if(ex1>=14&&nz>=Math.max(need,0.4*ex1))out.push({k:'zero',text:`On ${nz} of the ${ex1} days with solar export you used almost no grid power between 5 and 10 pm. Most homes with only solar buy power in the evening, so this usually means a battery is running the house.`,q:'Do you have a battery?',opts:[['unsure','Not sure'],['battery','Yes, I have a battery'],['other','No']]})}
+  out.forEach(f=>f.ans='unsure');return out}
+function renderFind(list){FIND=list||[];const el=$('findings');
+  if(!FIND.length){el.style.display='none';el.innerHTML='';return}
+  el.style.display='';
+  el.innerHTML='<h3 style="margin:4px 0">We noticed some things in your file</h3><p class="muted" style="font-size:13px;margin:0 0 6px">A meter file only shows power bought from the grid. If a battery or an EV is already charging from it, that charging is counted as house use. Answer what you can and the sizes will make more sense.</p>'+FIND.map((f,i)=>`<div style="border-left:3px solid var(--line);padding:6px 10px;margin:8px 0"><p style="font-size:13.5px;margin:0 0 6px">${f.text}</p><div class="field"><label>${f.q}</label><select data-fi="${i}">${f.opts.map(o=>`<option value="${o[0]}"${f.ans===o[0]?' selected':''}>${o[1]}</option>`).join('')}</select></div></div>`).join('')}
+$('findings').addEventListener('change',e=>{const i=e.target.dataset.fi;if(i===undefined)return;const f=FIND[+i];f.ans=e.target.value;
+  if(f.ans==='battery'&&$('hasBat').value!=='yes')$('hasBat').value='yes';
+  if(f.ans==='car'&&$('evHas').value==='no')$('evHas').value='have';
+  run()});
 
 /* ---------- manual entry from a bill ---------- */
 function tmin(s){const q=String(s||'').split(':').map(Number);return(q[0]||0)*60+(q[1]||0)}
@@ -681,12 +719,12 @@ function buildManual(){
   const per={E1:e1};if(cl>0)per.E2=e2;
   return{iv:30,n:48,days,N,tot,gen:new Float64Array(N),per,eK:cl>0?['E1','E2']:['E1'],bK:[],gaps:0,bad:0,skipped:[],manual:true};
 }
-function useManual(){const r=buildManual();
+function useManual(){renderFind([]);const r=buildManual();
   if(typeof r==='string'){$('fileStatus').textContent=r;return}
   S=r;sourceName='the figures you typed in';isSample=false;
   $('fileStatus').textContent='Using your typed-in figures ('+S.days.length+' days). These are estimates, not meter readings.';
   run()}
-function onMode(){setMode();if($('srcMode').value==='nem12'){if(FILE){S=FILE.S;sourceName=FILE.name;isSample=FILE.isS;$('fileStatus').textContent=FILE.isS?'Showing a generated example household.':FILE.name+': '+S.days.length+' days loaded.';run()}}else useManual()}
+function onMode(){setMode();if($('srcMode').value==='nem12'){if(FILE){S=FILE.S;sourceName=FILE.name;isSample=FILE.isS;renderFind(FILE.find);$('fileStatus').textContent=FILE.isS?'Showing a generated example household.':FILE.name+': '+S.days.length+' days loaded.';run()}}else useManual()}
 $('srcMode').addEventListener('change',onMode);
 ['mDays','mStart','mTot','mAm','mPm','mSh','mOf','mCl'].forEach(id=>$(id).addEventListener('input',()=>{if($('srcMode').value!=='nem12')useManual()}));
 $('file').addEventListener('change',e=>{const f=e.target.files[0];if(!f)return;f.text().then(t=>load(t,f.name,false))});
