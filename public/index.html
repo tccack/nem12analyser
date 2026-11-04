@@ -552,7 +552,7 @@ let S=null,SZ=null,sourceName='',isSample=true;
 function readOpts(){return{phase:$('phase').value,hws:$('hws').value,scope:$('scope').value,hours:Math.max(6,Math.min(96,+$('hours').value||24)),pct:+$('pct').value,hasSolar:$('hasSolar').value,solarKw:Math.max(0,Math.min(40,+$('solarKw').value||0)),evHas:$('evHas').value,evKm:Math.max(0,+$('evKm').value||0),evUnit:$('evUnit').value,evWhen:$('evWhen').value,evChg:$('evChg').value,evSize:$('evSize').value,evPer:Math.max(0,+$('evPer').value||0),evWk:Math.max(0,+$('evWk').value||0)}}
 
 /* ---------- existing system (battery already installed) ---------- */
-let EXM=null,SEff=null;
+let EXM=null,SEff=null,REAL=null;
 (function(){const s=$('exInv'),g={};D.inv.forEach((i,k)=>{(g[i.m]=g[i.m]||[]).push([k,i])});
   Object.keys(g).sort().forEach(m=>{const og=document.createElement('optgroup');og.label=m;g[m].forEach(([k,i])=>{const o=document.createElement('option');o.value=k;o.textContent=i.s+' '+i.ac+' kW, '+(i.ph===3?'three':'single')+' phase (backup '+fmt(Math.min(i.ac,i.bk||i.ac),1)+' kW)';og.appendChild(o)});s.appendChild(og)})})();
 function synthSeries(SB,avg,heavy,peakKw,pkGiven){
@@ -586,6 +586,16 @@ function renderNeed(){
   $('dataChip').className='chip warn';$('dataChip').textContent='More information needed';
   $('summary').innerHTML='<div class="panel"><h2>We need a little more to size this</h2><p>You have a battery, so the meter file shows what you bought from the grid, not what the house uses. The battery and the car charge from it, so it cannot be used as the house load. Pick one of these:</p><ul><li>Type the readings from your solar or battery app into <b>Your existing system</b> above (average day, heaviest day, and the highest power if you have it).</li><li>Or enter your solar panel size in <b>About the house</b>, and the page will estimate the house use from the file, using solar production, grid import and export. That is rougher.</li></ul></div>';
   fbRefresh()}
+
+function trustNote(E){
+  const fl=[];if(E.bK&&E.bK.length)fl.push('solar export');
+  const hs=$('hasSolar').value==='yes',hb=$('hasBat').value==='yes',ev=$('evHas').value==='have';
+  if(hs&&!fl.length)fl.push('solar');if(hb)fl.push('a battery');if(ev)fl.push('an electric car');
+  const pat=(typeof FIND!=='undefined'&&FIND.length&&FIND.some(f=>f.ans!=='other'))?FIND.filter(f=>f.ans!=='other').length:0;
+  const plain=!fl.length&&!pat;
+  const b=plain?['good','A straightforward import file','This file looks like plain grid import with no solar, battery or car charging showing, so the meter readings below are a fair record of what the house actually drew. The peak events and heaviest days can be taken at face value.']
+   :['warn','A complicated file: read these figures as the grid sees them','The household has '+fl.join(', ')+(pat?' and the file shows patterns that point to a battery or car charging':'')+'. The meter records only what was bought from or sold to the grid, so the peaks and heaviest days below show grid activity, not true house use. A battery or car charger can create peaks that the house itself never needed, and solar can hide daytime use. They are a useful guide to when the grid was busiest. The sizes above are not taken from this table'+(S.existing?': they use the figures from your app or the estimate from your solar size.':', and the page has corrected for what it can.')];
+  return'<div class="banner" style="margin:8px 0;'+(plain?'background:#e8f4ea;border-color:#b9d9be;color:#1c4a26':'')+'"><b>'+b[1]+'.</b> '+esc(b[2])+'</div>'}
 function exInvStat(){const x=EXM;if(!x||!(x.invKw>0))return'<div class="stat"><span class="k">Your inverter</span><span class="v" style="font-size:22px">Not given</span><span class="w">Choose it or type its backup rating above to compare with the '+fmt(SZ.kNeed,1)+' kW needed.</span></div>';
   const ok=x.invKw>=SZ.kNeed;return`<div class="stat"><span class="k">Your inverter</span><span class="v" style="font-size:24px">${ok?'Big enough':'Short by '+fmt(SZ.kNeed-x.invKw,1)+' kW'}</span><span class="w">It supplies ${fmt(x.invKw,1)} kW in a blackout. The house needs ${fmt(SZ.kNeed,1)} kW.</span></div>`}
 function exAddOns(iv,add){const rows=[];D.bat.filter(b=>b.m===iv.m&&(!b.only||b.only.some(p=>iv.id.startsWith(p)))&&(!b.no||!b.no.some(p=>iv.id.startsWith(p)))&&(!b.vc||!iv.vc||b.vc===iv.vc)&&!(b.vr&&iv.vr&&(b.vr[0]<iv.vr[0]||b.vr[1]>iv.vr[1]))).forEach(b=>{const q=Math.max(b.min||1,Math.ceil(add/b.kwh));if(q<=b.max)rows.push({b,q,kwh:q*b.kwh})});rows.sort((a,b)=>a.kwh-b.kwh);return rows.slice(0,4)}
@@ -599,7 +609,7 @@ function exPanel(){const x=EXM,L=[];
   if(x.invKw>0&&x.invKw<SZ.kNeed)h+='<p class="muted" style="margin:10px 0 0;font-size:13px">If the inverter must be replaced, the shortlist further down shows complete new systems that meet both numbers.</p>';
   return h+'</div>'}
 function run(){
-  const SB=S;if(!SB)return;let eff=null;
+  const SB=S;if(!SB)return;let eff=null;REAL=SB.manual?null:SB;
   const o0=Object.assign(readOpts(),{});
   $('exSys').style.display=$('hasBat').value==='yes'?'':'none';$('exCarWrap').style.display=$('evHas').value==='have'?'':'none';
   try{eff=exSeries(SB,o0)}catch(e){eff=null;EXM=null}
@@ -664,20 +674,23 @@ function run0(){
   </div>`;
   if(S.existing){const ss=$('summary').querySelector('.solarStat');if(ss)ss.remove();$('summary').insertAdjacentHTML('beforeend',exPanel())}
   // evidence
-  const pks=topPeaks(SZ.tot,S,3);
-  const ds=SZ.dsT;const order=Array.from(ds.keys()).sort((a,b)=>ds[b]-ds[a]).slice(0,10);
+  const EV=S.existing&&REAL?REAL:S,TT=S.existing&&REAL?REAL.tot:SZ.tot;
+  const pks=topPeaks(TT,EV,3);
+  const ds=S.existing&&REAL?(()=>{const a=[];for(let d=0;d<EV.days.length;d++){let s=0;for(let i=0;i<EV.n;i++)s+=TT[d*EV.n+i];a.push(s)}return a})():SZ.dsT;const order=Array.from(ds.keys()).sort((a,b)=>ds[b]-ds[a]).slice(0,10);
   const hrT=hourly(SZ.tot,S),hrB=SZ.hasCL&&SZ.scope==='excl'?hourly(SZ.Lb,S):null;
-  let t10='';order.forEach(di=>{const w=topWindows(SZ.tot,S,di,3);
-    t10+=`<tr><td>${esc(dlabel(S.days[di]))}</td><td class="n">${fmt(ds[di],1)}</td><td>${w.map(x=>`<div class="mono" style="font-size:12.5px">${tl(x.s,S.iv)}–${tl(x.e%S.n,S.iv)} &nbsp;${fmt(x.kwh,1)} kWh &nbsp;peak ${fmt(x.kw,1)} kW</div>`).join('')}</td></tr>`});
+  let t10='';order.forEach(di=>{const w=topWindows(TT,EV,di,3);
+    t10+=`<tr><td>${esc(dlabel(EV.days[di]))}</td><td class="n">${fmt(ds[di],1)}</td><td>${w.map(x=>`<div class="mono" style="font-size:12.5px">${tl(x.s,EV.iv)}–${tl(x.e%EV.n,EV.iv)} &nbsp;${fmt(x.kwh,1)} kWh &nbsp;peak ${fmt(x.kw,1)} kW</div>`).join('')}</td></tr>`});
   $('evidence').innerHTML=`<div><h2>What your data shows</h2></div>
   <div class="charts"><div class="panel"><h3>Energy per day</h3><p class="muted" style="font-size:13px;margin-bottom:6px">Bars above the design day are amber.</p>${dailyChart(SZ.dsB,S,SZ.design)}</div>
    <div class="panel"><h3>Average day</h3><p class="muted" style="font-size:13px;margin-bottom:6px">${hrB?'Solid is the whole house. Dashed is the backed-up part.':'Average power in each hour.'}</p>${profileChart(hrT.map(v=>v),hrB)}</div></div>
   <div class="grid2" style="grid-template-columns:minmax(0,1fr) minmax(0,1.5fr)">
-   <div class="panel"><h3>Highest power (separate events)</h3><div class="scroll"><table><tr><th>When</th><th class="n">kW</th></tr>${pks.map(p=>`<tr><td>${esc(dlabel(p.d))}, ${tl(p.s,S.iv)}</td><td class="n">${fmt(p.kw,2)}</td></tr>`).join('')}</table></div>
-     <p class="muted" style="font-size:12.5px;margin-top:8px">All channels added together. Each reading is a ${S.iv}-minute average.</p></div>
+   <div class="panel"><h3>Highest power (separate events)</h3><div class="scroll"><table><tr><th>When</th><th class="n">kW</th></tr>${pks.map(p=>`<tr><td>${esc(dlabel(p.d))}, ${tl(p.s,EV.iv)}</td><td class="n">${fmt(p.kw,2)}</td></tr>`).join('')}</table></div>
+     <p class="muted" style="font-size:12.5px;margin-top:8px">All channels added together. Each reading is a ${EV.iv}-minute average.</p></div>
    <div class="panel"><h3>Ten heaviest days and their busiest hours</h3><div class="scroll"><table><tr><th>Day</th><th class="n">kWh</th><th>Three busiest one-hour periods</th></tr>${t10}</table></div></div>
   </div>`;
-  if(S.manual)$('evidence').innerHTML='<div class="panel"><h2>What your data shows</h2><p class="muted">No charts are drawn for typed-in figures, because they would show an estimated pattern, not your real use. Upload a NEM12 file to see your own busiest days and highest power.</p></div>';
+  $('evidence').firstElementChild.insertAdjacentHTML('afterend',trustNote(EV));
+  if(S.existing&&REAL){const g=$('evidence').querySelector('.grid2'),h=$('evidence').firstElementChild;$('evidence').innerHTML='<div><h2>What your data shows</h2></div>'+trustNote(EV)+g.outerHTML}
+  else if(S.manual)$('evidence').innerHTML='<div class="panel"><h2>What your data shows</h2><p class="muted">No charts are drawn for typed-in figures, because they would show an estimated pattern, not your real use. Upload a NEM12 file to see your own busiest days and highest power.</p></div>';
   // method
   const dm=SZ.dm;
   $('method').innerHTML=`<div><h2>How these numbers were reached</h2></div><div class="panel"><ol class="steps">
