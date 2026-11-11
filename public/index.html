@@ -154,6 +154,12 @@ svg.heroart{width:100%;height:auto}
 .card.first{box-shadow:inset 0 4px 0 var(--accent)}
 .btn{border-radius:10px}
 select,input[type=number],input[type=text],textarea{border-radius:8px}
+.fgroup{display:flex;flex-direction:column;gap:12px;padding-top:14px;margin-top:14px;border-top:1px solid var(--line)}
+h3.gh{display:flex;align-items:center;gap:8px;font-size:15px}
+h3.gh .ico{width:26px;height:26px;padding:4px;border-radius:8px;background:var(--tile);color:var(--accent)}
+.fgroup .fields{grid-template-columns:repeat(2,minmax(0,1fr));align-items:start}
+@media(max-width:560px){.fgroup .fields{grid-template-columns:minmax(0,1fr)}}
+.fgroup select,.fgroup input[type=number]{height:40px}
 @media print{.hero,.heroimg{display:none!important}}
 #rankSec,#tarDet,.stars{display:none!important}
 </style>
@@ -161,7 +167,7 @@ select,input[type=number],input[type=text],textarea{border-radius:8px}
 <body>
 
 
-<div class="wrap"><svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs><symbol id="i-bat" viewBox="0 0 24 24"><rect x="3" y="7" width="16" height="10" rx="2"/><path d="M21 10.5v3"/><path d="M6 10v4M9.5 10v4M13 10v4"/></symbol><symbol id="i-sol" viewBox="0 0 24 24"><path d="M5 9h14l2 9H3z"/><path d="M9.7 9L8.5 18M14.3 9l1.2 9M4 13.5h16"/><circle cx="12" cy="4" r="1.6"/></symbol><symbol id="i-inv" viewBox="0 0 24 24"><rect x="4" y="3.5" width="16" height="17" rx="3"/><path d="M7.5 12c1.5-3.5 3-3.5 4.5 0s3 3.5 4.5 0"/></symbol><symbol id="i-plug" viewBox="0 0 24 24"><path d="M9 3v5M15 3v5"/><path d="M6.5 8h11v3.5a5.5 5.5 0 01-11 0z"/><path d="M12 17v4"/></symbol><symbol id="i-car" viewBox="0 0 24 24"><path d="M4 16v-3.5l2-4.5h12l2 4.5V16z"/><path d="M4 16v2.5M20 16v2.5"/><circle cx="7.5" cy="14" r=".8"/><circle cx="16.5" cy="14" r=".8"/><path d="M12 3.5l-1.5 2.6h2L11.5 8"/></symbol><symbol id="i-house" viewBox="0 0 24 24"><path d="M3.5 11L12 4l8.5 7"/><path d="M5.5 10v10h13V10"/><path d="M10 20v-5h4v5"/></symbol><symbol id="i-meter" viewBox="0 0 24 24"><path d="M4 16a8 8 0 1116 0"/><path d="M12 16l4-5"/><path d="M4 19.5h16"/></symbol><symbol id="i-bolt" viewBox="0 0 24 24"><path d="M13 3L5.5 13.5H12L11 21l7.5-10.5H12z"/></symbol><symbol id="i-list" viewBox="0 0 24 24"><path d="M8 7h12M8 12h12M8 17h12"/><path d="M3.5 7l1 1 2-2M3.5 12l1 1 2-2M3.5 17l1 1 2-2"/></symbol><symbol id="i-chart" viewBox="0 0 24 24"><path d="M4 20V4M4 20h16"/><path d="M8 16v-4M12 16V8M16 16v-6"/></symbol><symbol id="i-chat" viewBox="0 0 24 24"><path d="M4 5h16v11H9l-5 4z"/></symbol><symbol id="i-gear" viewBox="0 0 24 24"><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M18.4 5.6l-2.1 2.1M7.7 16.3l-2.1 2.1"/><circle cx="12" cy="12" r="3.5"/></symbol></defs></svg>
+<div class="wrap"><svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs><symbol id="i-bat" viewBox="0 0 24 24"><rect x="3" y="7" width="16" height="10" rx="2"/><path d="M21 10.5v3"/><path d="M6 10v4M9.5 10v4M13 10v4"/></symbol><symbol id="i-sol" viewBox="0 0 24 24"><path d="M5 9h14l2 9H3z"/><path d="M9.7 9L8.5 18M14.3 9l1.2 9M4 13.5h16"/><circle cx="12" cy="4" r="1.6"/></symbol><symbol id="i-inv" viewBox="0 0 24 24"><rect x="4" y="3.5" width="16" height="17" rx="3"/><path d="M7.5 12c1.5-3.5 3-3.5 4.5 0s3 3.5 4.5 0"/></symbol><symbol id="i-plug" viewBox="0 0 24 24"><path d="M9 3v5M15 3v5"/><path d="M6.5 8h11v3.5a5.5 5.5 0 01-11 0z"/><path d="M12 17v4"/></symbol><symbol id="i-car" viewBox="0 0 24 24"><path d="M4 16v-3.5l2-4.5h12l2 4.5V16z"/><path d="M4 16v2.5M20 16v2.5"/><circle cx="7.5" cy="14" r=".8"/><circle cx="16.5" cy="14" r=".8"/><path d="M12 3.5l-1.5 2.6h2L11.5 8"/></symbol><symbol id="i-house" viewBox="0 0 24 24"><path d="M3.5 11L12 4l8.5 7"/><path d="M5.5 10v10h13V10"/><path d="M10 20v-5h4v5"/></symbol><symbol id="i-meter" viewBox="0 0 24 24"><path d="M4 16a8 8 0 1116 0"/><path d="M12 16l4-5"/><path d="M4 19.5h16"/></symbol><symbol id="i-bolt" viewBox="0 0 24 24"><path d="M13 3L5.5 13.5H12L11 21l7.5-10.5H12z"/></symbol><symbol id="i-list" viewBox="0 0 24 24"><path d="M8 7h12M8 12h12M8 17h12"/><path d="M3.5 7l1 1 2-2M3.5 12l1 1 2-2M3.5 17l1 1 2-2"/></symbol><symbol id="i-flame" viewBox="0 0 24 24"><path d="M12 3c1 3.5 5 5.5 5 10a5 5 0 01-10 0c0-2 1-3.2 2-4.2.2 1.2.8 2 1.6 2.4C10.2 8 10.6 5.4 12 3z"/></symbol><symbol id="i-drop" viewBox="0 0 24 24"><path d="M12 3.5c3 4 6 6.8 6 10.5a6 6 0 01-12 0c0-3.7 3-6.5 6-10.5z"/></symbol><symbol id="i-chart" viewBox="0 0 24 24"><path d="M4 20V4M4 20h16"/><path d="M8 16v-4M12 16V8M16 16v-6"/></symbol><symbol id="i-chat" viewBox="0 0 24 24"><path d="M4 5h16v11H9l-5 4z"/></symbol><symbol id="i-gear" viewBox="0 0 24 24"><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M18.4 5.6l-2.1 2.1M7.7 16.3l-2.1 2.1"/><circle cx="12" cy="12" r="3.5"/></symbol></defs></svg>
   <header class="top hero">
     <div class="herotxt">
       <div class="brandrow"><span class="themes noprint" role="group" aria-label="Colour theme"><button type="button" class="sw" data-pal="daylight" title="Daylight" aria-label="Daylight theme"></button><button type="button" class="sw" data-pal="eucalypt" title="Eucalypt" aria-label="Eucalypt theme"></button><button type="button" class="sw" data-pal="coastal" title="Coastal" aria-label="Coastal theme"></button><button type="button" class="sw" data-pal="dusk" title="Dusk" aria-label="Dusk theme"></button></span></div>
@@ -207,9 +213,9 @@ select,input[type=number],input[type=text],textarea{border-radius:8px}
       </div>
       <div class="panel" style="display:flex;flex-direction:column;gap:12px">
         <div><h2 class="hi"><svg class="ico" aria-hidden="true"><use href="#i-house"/></svg>About the house</h2></div>
-        <div class="fields">
+        <div class="fgroup"><h3 class="gh"><svg class="ico" aria-hidden="true"><use href="#i-plug"/></svg>Supply and blackout</h3><div class="fields">
           <div class="field"><label for="phase">Supply</label>
-            <select id="phase"><option value="unsure">Not sure</option><option value="single">Single phase</option><option value="three">Three phase</option><option value="threeone">Three phase supply, but what I would back up is on one phase</option></select></div>
+            <select id="phase"><option value="unsure">Not sure</option><option value="single">Single phase</option><option value="three">Three phase</option><option value="threeone">Three phase supply, loads on one phase</option></select></div>
           <div class="field"><label for="hws">Hot water on controlled load</label>
             <select id="hws"><option value="cl">Yes (E2 channel)</option><option value="none">No</option></select></div>
           <div class="field"><label for="scope">Keep running in a blackout</label>
@@ -218,30 +224,36 @@ select,input[type=number],input[type=text],textarea{border-radius:8px}
             <input type="number" id="hours" min="6" max="96" step="6" value="24"></div>
           <div class="field"><label for="pct">Design day (percentile of daily use)</label>
             <select id="pct"><option value="90">90th, covers 9 days in 10</option><option value="95" selected>95th, covers 19 days in 20</option><option value="100">Heaviest day in the file</option></select></div>
+        </div></div>
+        <div class="fgroup"><h3 class="gh"><svg class="ico" aria-hidden="true"><use href="#i-sol"/></svg>Solar and battery you already have</h3><div class="fields">
           <div class="field"><label for="hasSolar">Do you already have solar</label>
             <select id="hasSolar"><option value="no">No</option><option value="yes">Yes, file shows net use</option></select></div>
+          <div class="field"><label for="solarKw">Existing solar size (kW of panels, 0 if none)</label>
+            <input type="number" id="solarKw" min="0" max="40" step="0.5" value="0"></div>
           <div class="field"><label for="hasBat">Do you already have a battery</label>
             <select id="hasBat"><option value="no">No</option><option value="yes">Yes</option></select></div>
           <div class="field" id="batKwhWrap" style="display:none"><label for="batKwh">Size of existing battery (usable kWh)</label>
             <input type="number" id="batKwh" min="0" max="200" step="0.1" value="0"></div>
-          <div class="field"><label for="solarKw">Existing solar size (kW of panels, 0 if none)</label>
-            <input type="number" id="solarKw" min="0" max="40" step="0.5" value="0"></div>
+        </div></div>
+        <div class="fgroup"><h3 class="gh"><svg class="ico" aria-hidden="true"><use href="#i-car"/></svg>Electric vehicles</h3><div class="fields">
           <div class="field"><label for="evHas">Electric vehicle</label>
-            <select id="evHas"><option value="no">No</option><option value="have">Yes, I already have one</option><option value="plan">No, but I am planning to get one</option></select></div>
-          <div class="field" id="evChgWrap" style="display:none"><label for="evChg">How is it (or will it be) charged at home</label>
-            <select id="evChg"><option value="unsure">Not sure</option><option value="2.3">Plug-in cable on a power point (about 2.3 kW)</option><option value="7.4">Wall charger on single phase (about 7 kW)</option><option value="11">Wall charger on three phase (about 11 kW)</option></select></div>
-          <div class="field" id="evSizeWrap" style="display:none"><label for="evSize">Size the system for</label>
-            <select id="evSize"><option value="house">The house only (the car is left off in a blackout)</option><option value="car">The house plus the car</option></select></div>
-          <div class="field" id="evPerWrap" style="display:none"><label for="evPer">Each car: typical charge, kWh, and charges a week</label>
-            <div style="display:flex;gap:8px"><input type="number" id="evPer" min="0" max="120" step="1" value="25" style="flex:1" aria-label="kWh added per charge"><input type="number" id="evWk" min="0" max="14" step="0.5" value="3" style="flex:1" aria-label="charges per week"></div></div>
+            <select id="evHas"><option value="no">No</option><option value="have">Yes, I already have one</option><option value="plan">Planning to get one</option></select></div>
           <div class="field" id="evNWrap" style="display:none"><label for="evN">How many electric vehicles</label><input type="number" id="evN" min="1" max="6" step="1" value="1"><span class="muted" style="font-size:12.5px;margin-top:3px">Each car is counted with the same figures below. Include one you plan to buy.</span></div>
           <div class="field" id="evModelWrap" style="display:none"><label for="evModel">Which car (optional)</label><select id="evModel"><option value="">Not sure / other</option></select></div>
+          <div class="field" id="evChgWrap" style="display:none"><label for="evChg">How is it (or will it be) charged at home</label>
+            <select id="evChg"><option value="unsure">Not sure</option><option value="2.3">Power point cable (about 2.3 kW)</option><option value="7.4">Wall charger, single phase (7 kW)</option><option value="11">Wall charger, three phase (11 kW)</option></select></div>
+          <div class="field" id="evSizeWrap" style="display:none"><label for="evSize">Size the system for</label>
+            <select id="evSize"><option value="house">House only (car off in a blackout)</option><option value="car">House plus the car</option></select></div>
+          <div class="field" id="evPerWrap" style="display:none"><label for="evPer">Each car: typical charge, kWh, and charges a week</label>
+            <div style="display:flex;gap:8px"><input type="number" id="evPer" min="0" max="120" step="1" value="25" style="flex:1" aria-label="kWh added per charge"><input type="number" id="evWk" min="0" max="14" step="0.5" value="3" style="flex:1" aria-label="charges per week"></div></div>
           <div class="field"><label for="evKm">Distance driven, for each car</label>
             <div style="display:flex;gap:8px"><input type="number" id="evKm" min="0" max="3000" step="10" value="0" style="flex:1"><select id="evUnit" style="flex:1"><option value="week">km per week</option><option value="day">km per day</option></select></div></div>
           <div class="field"><label for="evWhen">When do you mostly charge</label>
             <select id="evWhen"><option value="solar">Daytime, from solar</option><option value="night">Overnight, off-peak grid</option></select></div>
+        </div></div>
+        <div class="fgroup"><h3 class="gh"><svg class="ico" aria-hidden="true"><use href="#i-flame"/></svg>Cooking</h3><p class="muted" style="font-size:12.5px;margin:-4px 0 0">Leave on "No change" if you cook with electricity already or will stay on gas.</p><div class="fields">
           <div class="field"><label for="cookSw">Cooking</label>
-            <select id="cookSw"><option value="no">No change (electric already, or staying on gas)</option><option value="ind">Gas now, planning to switch to induction</option></select></div>
+            <select id="cookSw"><option value="no">No change</option><option value="ind">Gas now, switching to induction</option></select></div>
           <div class="field" id="cookSizeWrap" style="display:none"><label for="cookSize">Induction cooker (90 cm freestanding)</label>
             <select id="cookSize"><option value="mid">Mid-range, 10.6 kW maximum</option><option value="big">Larger model, 15.3 kW maximum</option></select></div>
           <div class="field" id="cookWireWrap" style="display:none"><label for="cookWire">How it will be wired</label>
@@ -249,12 +261,14 @@ select,input[type=number],input[type=text],textarea{border-radius:8px}
           <div class="field" id="cookBkWrap" style="display:none"><label for="cookBk">The cooker in a blackout</label>
             <select id="cookBk"><option value="on">Keep it running</option><option value="off">Leave it off</option></select></div>
           <div class="field" id="cookKhWrap" style="display:none"><label for="cookKh">Cooking energy, kWh a day (optional)</label><input type="number" id="cookKh" min="0" max="20" step="0.5" placeholder="default 2.5"></div>
+        </div></div>
+        <div class="fgroup"><h3 class="gh"><svg class="ico" aria-hidden="true"><use href="#i-drop"/></svg>Hot water</h3><p class="muted" style="font-size:12.5px;margin:-4px 0 0">Leave on "No change" if your hot water is electric already or will stay on gas.</p><div class="fields">
           <div class="field"><label for="gwSw">Gas hot water</label>
-            <select id="gwSw"><option value="no">No change (electric already, or staying on gas)</option><option value="hp">Gas now, planning to switch to a heat pump</option></select></div>
+            <select id="gwSw"><option value="no">No change</option><option value="hp">Gas now, switching to heat pump</option></select></div>
           <div class="field" id="gwBkWrap" style="display:none"><label for="gwBk">The heat pump in a blackout</label>
-            <select id="gwBk"><option value="off">Leave it off (the tank stays hot)</option><option value="on">Keep it running</option></select></div>
+            <select id="gwBk"><option value="off">Leave it off (tank stays hot)</option><option value="on">Keep it running</option></select></div>
           <div class="field" id="gwKhWrap" style="display:none"><label for="gwKh">Heat pump energy, kWh a day (optional)</label><input type="number" id="gwKh" min="0" max="20" step="0.5" placeholder="default 3"></div>
-        </div>
+        </div></div>
         <p class="muted" style="font-size:13px">Network rules in use are for SA Power Networks: single phase inverters up to 10 kW and 5 kW export, three phase up to 30 kW and 5 kW export per phase.</p>
       </div>
     </div>
@@ -927,7 +941,7 @@ $('file').addEventListener('change',e=>{const f=e.target.files[0];if(!f)return;f
 const drop=$('drop');['dragenter','dragover'].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.add('over')}));
 ['dragleave','drop'].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.remove('over')}));
 drop.addEventListener('drop',e=>{const f=e.dataTransfer.files[0];if(f)f.text().then(t=>load(t,f.name,false))});
-['gwSw','gwBk','cookSw','cookSize','cookWire','cookBk','evSize','evChg','hasBat','phase','hws','scope','hours','pct','hasSolar','solarKw','evHas','evKm','evUnit','evWhen'].forEach(id=>$(id).addEventListener('change',run));buildTar();(function(){const s=$('evModel');D.ev.forEach((e,i)=>{const o=document.createElement('option');o.value=i;o.textContent=e.g?'Average new EV, not sure which ('+e.b+' kWh, about '+e.km+' km)':e.m+' '+e.n+' ('+e.b+' kWh)';s.appendChild(o)});s.addEventListener('change',()=>{const v=s.value;if(v!==''){const e=D.ev[+v];$('evChg').value=e.g?'unsure':e.ac>=10?'11':'7.4';evTyTouched=false}run()})})();$('dlRpt').addEventListener('click',()=>{try{window.print()}catch(e){alert('Use your browser Print command and choose Save as PDF.')}});$('tarDet').addEventListener('input',e=>{const el=e.target;if(el.dataset.f==='p'&&el.dataset.t==='u'&&TOU.find(r=>r.k===el.dataset.k&&r.of))el.dataset.own=el.value===''?'':'1';syncTar();saveTar()});$('tarDet').addEventListener('change',()=>{syncTar();saveTar()});buildCirc();$('circBox').addEventListener('change',e=>{if(e.target.matches('[data-c=ev] [data-f=ty]'))evTyTouched=true;syncCirc();run()});$('circBox').addEventListener('input',e=>{if(e.target.type==='number')run()});$('solarKw').addEventListener('input',run);$('evN').addEventListener('input',run);$('cookKh').addEventListener('input',run);$('gwKh').addEventListener('input',run);['exGoal','exInv','exCarIn'].forEach(id=>$(id).addEventListener('change',run));['exInvKw','exAvg','exHeavy','exPeak'].forEach(id=>$(id).addEventListener('input',run));$('batKwh').addEventListener('input',run);$('evKm').addEventListener('input',run);$('evPer').addEventListener('input',run);$('evWk').addEventListener('input',run);
+['gwSw','gwBk','cookSw','cookSize','cookWire','cookBk','evSize','evChg','hasBat','phase','hws','scope','hours','pct','hasSolar','solarKw','evHas','evKm','evUnit','evWhen'].forEach(id=>$(id).addEventListener('change',run));buildTar();(function(){const s=$('evModel');D.ev.forEach((e,i)=>{const o=document.createElement('option');o.value=i;o.textContent=e.g?'Average EV, not sure which':e.m+' '+e.n+' ('+e.b+' kWh)';s.appendChild(o)});s.addEventListener('change',()=>{const v=s.value;if(v!==''){const e=D.ev[+v];$('evChg').value=e.g?'unsure':e.ac>=10?'11':'7.4';evTyTouched=false}run()})})();$('dlRpt').addEventListener('click',()=>{try{window.print()}catch(e){alert('Use your browser Print command and choose Save as PDF.')}});$('tarDet').addEventListener('input',e=>{const el=e.target;if(el.dataset.f==='p'&&el.dataset.t==='u'&&TOU.find(r=>r.k===el.dataset.k&&r.of))el.dataset.own=el.value===''?'':'1';syncTar();saveTar()});$('tarDet').addEventListener('change',()=>{syncTar();saveTar()});buildCirc();$('circBox').addEventListener('change',e=>{if(e.target.matches('[data-c=ev] [data-f=ty]'))evTyTouched=true;syncCirc();run()});$('circBox').addEventListener('input',e=>{if(e.target.type==='number')run()});$('solarKw').addEventListener('input',run);$('evN').addEventListener('input',run);$('cookKh').addEventListener('input',run);$('gwKh').addEventListener('input',run);['exGoal','exInv','exCarIn'].forEach(id=>$(id).addEventListener('change',run));['exInvKw','exAvg','exHeavy','exPeak'].forEach(id=>$(id).addEventListener('input',run));$('batKwh').addEventListener('input',run);$('evKm').addEventListener('input',run);$('evPer').addEventListener('input',run);$('evWk').addEventListener('input',run);
 window.__BS={parseNEM12,buildSeries,sizing,recommend,load,get S(){return S},get SZ(){return SZ}};
 load(sample(),'example',true);
 })();
