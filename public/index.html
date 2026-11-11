@@ -62,6 +62,10 @@ select:focus-visible,input:focus-visible,textarea:focus-visible,button:focus-vis
   h2{break-after:avoid}
   *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
   .scroll{overflow:visible!important}
+  .grid2{display:block!important}.grid2>.panel{margin-bottom:12px;break-inside:avoid!important}
+  .mono{white-space:nowrap}
+  .stats{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+  .charts{grid-template-columns:minmax(0,1fr)!important}
 }
 input[type=file]{font:inherit;font-size:13px;max-width:100%}
 .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:0;border:1px solid var(--line);border-radius:6px;background:var(--surface)}
