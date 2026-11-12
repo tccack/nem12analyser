@@ -128,6 +128,7 @@ h2.hi .ico{width:30px;height:30px;padding:5px;border-radius:9px;background:var(-
 .hero .herotxt p{font-size:16px;color:var(--ink);opacity:.82;max-width:48ch}
 .heroact{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:4px}
 .hero .chip{background:color-mix(in srgb,var(--surface) 80%,transparent)}
+.hero .chip{max-width:100%;overflow-wrap:anywhere;word-break:break-all;border-radius:14px}
 .heroimg{min-width:0}
 svg.heroart{width:100%;height:auto}
 .heroart .sun circle{fill:var(--sun)}.heroart .rays line{stroke:var(--sun);stroke-width:3;stroke-linecap:round}
@@ -157,7 +158,10 @@ select,input[type=number],input[type=text],textarea{border-radius:8px}
 .fgroup{display:flex;flex-direction:column;gap:12px;padding-top:14px;margin-top:14px;border-top:1px solid var(--line)}
 h3.gh{display:flex;align-items:center;gap:8px;font-size:15px}
 h3.gh .ico{width:26px;height:26px;padding:4px;border-radius:8px;background:var(--tile);color:var(--accent)}
-.fgroup .fields{grid-template-columns:repeat(2,minmax(0,1fr));align-items:start}
+.fgroup .fields{grid-template-columns:repeat(2,minmax(0,1fr));align-items:end}
+.fgroup .field>label{line-height:1.3}
+#fileStatus{overflow-wrap:anywhere;word-break:break-all}
+.fgroup.net p{margin:0}
 @media(max-width:560px){.fgroup .fields{grid-template-columns:minmax(0,1fr)}}
 .fgroup select,.fgroup input[type=number]{height:40px}
 @media print{.hero,.heroimg{display:none!important}}
@@ -228,7 +232,7 @@ h3.gh .ico{width:26px;height:26px;padding:4px;border-radius:8px;background:var(-
         <div class="fgroup"><h3 class="gh"><svg class="ico" aria-hidden="true"><use href="#i-sol"/></svg>Solar and battery you already have</h3><div class="fields">
           <div class="field"><label for="hasSolar">Do you already have solar</label>
             <select id="hasSolar"><option value="no">No</option><option value="yes">Yes, file shows net use</option></select></div>
-          <div class="field"><label for="solarKw">Existing solar size (kW of panels, 0 if none)</label>
+          <div class="field"><label for="solarKw">Existing solar size (kW, 0 if none)</label>
             <input type="number" id="solarKw" min="0" max="40" step="0.5" value="0"></div>
           <div class="field"><label for="hasBat">Do you already have a battery</label>
             <select id="hasBat"><option value="no">No</option><option value="yes">Yes</option></select></div>
@@ -271,12 +275,12 @@ h3.gh .ico{width:26px;height:26px;padding:4px;border-radius:8px;background:var(-
             <select id="gwBk"><option value="off">Leave it off (tank stays hot)</option><option value="on">Keep it running</option></select></div>
           <div class="field" id="gwKhWrap" style="display:none"><label for="gwKh">Heat pump energy, kWh a day (optional)</label><input type="number" id="gwKh" min="0" max="20" step="0.5" placeholder="default 3"></div>
         </div></div>
-        <p class="muted" style="font-size:13px">Network rules in use are for SA Power Networks: single phase inverters up to 10 kW and 5 kW export, three phase up to 30 kW and 5 kW export per phase.</p>
+        <div class="fgroup net"><h3 class="gh"><svg class="ico" aria-hidden="true"><use href="#i-bolt"/></svg>Network rules</h3><p class="muted" style="font-size:13px">The inverter limits used here are SA Power Networks rules: single phase inverters up to 10 kW and 5 kW export, three phase up to 30 kW and 5 kW export per phase.</p></div>
       </div>
     </div>
     <details class="panel" id="circDet" style="margin-top:16px">
       <summary style="cursor:pointer;font-weight:600">Your circuits: cooking, air conditioning, hot water <span class="muted" style="font-weight:400;font-size:13px">(optional, check your switchboard)</span></summary>
-      <p class="muted" style="font-size:13.5px;margin:10px 0">Open your switchboard and look for dedicated breakers for each of these. The breaker size (amps) tells us how much power each could draw, which the meter data can hide. Choose whether each should keep running in a blackout. Leave everything on Skip to ignore this section.</p>
+      <p class="muted" style="font-size:13.5px;margin:10px 0">Open your switchboard and look for dedicated breakers for each of these. The breaker size (amps) tells us how much power each could draw, which the meter data can hide. Choose whether each should keep running in a blackout. Use this for appliances you already have on electricity. If you are switching from gas, use the Cooking and Hot water choices above instead, and leave the matching circuit on Skip so it is not counted twice. Leave everything on Skip to ignore this section.</p>
       <div id="circBox" style="display:flex;flex-direction:column;gap:14px"></div>
       <div id="circSum" class="muted" style="font-size:13px;margin-top:10px"></div>
     </details>
@@ -761,6 +765,8 @@ function run0(){
   if(SZ.evDay>0)msgs.push('EV: '+(o.evN>1?o.evN+' cars, each ':'')+o.evKm+' km '+(o.evUnit==='week'?'a week':'a day')+' at '+fmt(evEff()*100,0)+' kWh per 100 km'+($('evModel').value!==''?(D.ev[+$('evModel').value].g?' (average of the models in the list, rated range plus 15% for real driving)':' ('+D.ev[+$('evModel').value].m+' '+D.ev[+$('evModel').value].n+', rated range plus 15% for real driving)'):'')+' is about '+SZ.evDay.toFixed(1)+' kWh a day'+(o.evN>1?' in total':'')+'. '+(SZ.evWhen==='solar'?'Charging from solar, so this was added to the solar target. ':'Charging overnight from the grid at off-peak, so no extra solar is needed. ')+'The planned EV is not counted in the backup battery or inverter size.');
   if(o.evHas==='have'){if(o.evSize==='house')msgs.push('Sized for the house only. '+(o.evN>1?'Your '+o.evN+' cars are':'Your car is')+' left off in a blackout, so about '+fmt(o.evPer,0)+' kWh for each of '+fmt(o.evWk,1)+' charges a week'+(o.evN>1?' for each car':'')+' ('+fmt(SZ.carDay,1)+' kWh a day on average) was taken out of the battery and solar sizes, but the inverter size is not reduced for it, because your highest power may not be the car charging. Choose "The house plus the car" if the car must keep charging when the grid is off.');
     else msgs.push('Sized for the house plus '+(o.evN>1?'the cars':'the car')+'. The car charging in your meter file is kept in the battery and solar sizes, and the inverter allows for '+(o.evN>1?'up to two chargers':'the charger')+' running at the same time ('+fmt(SZ.cx.rows.filter(c=>c.k==='ev').map(c=>c.kw)[0]||0,1)+' kW). This gives much larger sizes than the house alone needs.')}
+  if(o.cookOn&&(o.circ||[]).some(c=>c.k==='cook'&&c.st==='yes'))msgs.push('You have both switched to induction above and entered an electric cooking circuit below, so the cooking is counted twice. Set the Cooking circuit to Skip.');
+  if(o.gwOn&&(o.circ||[]).some(c=>c.k==='hws'&&c.st==='yes'))msgs.push('You have both switched to a heat pump above and entered a hot water circuit below, so hot water is counted twice. Set the Hot water circuit to Skip.');
   if(o.cookOn){const w=o.cookWire,A=o.cookAmps,nm={single:'single phase',two:'two phase',three:'three phase'}[w];
     msgs.push('Induction cooker ('+o.cookName+'): switching from gas adds about '+fmt(o.cookDay,1)+' kWh a day'+($('cookKh').value===''?' (an assumed figure)':'')+(o.cookBk==='on'?' to the battery and solar sizes, and '+fmt(o.cookKw,1)+' kW to the inverter, half of the cooker\'s '+fmt(o.cookMax,1)+' kW maximum because the zones and oven are rarely all on at once.':' to the solar target. It is left off in a blackout, so it adds nothing to the battery or inverter.')+(o.cookCalc?' Worked out from its '+fmt(o.cookMax,1)+' kW rating at 230 V, that is about '+A.single+' A on single phase and about '+A.three+' A per phase on three phase wiring, so wiring it '+nm+' means up to '+A[w]+' A on ':' The maker lists its maximum current as '+A.single+' A on single phase, '+A.two+' A on two phase and '+A.three+' A on three phase wiring, so wiring it '+nm+' means up to '+A[w]+' A on ')+(w==='single'?'one phase':w==='two'?'each of two phases':'each phase')+'. Your electrician must confirm the supply and switchboard can carry it.');
     if(o.phase==='single'&&w!=='single')msgs.push('A single phase supply can only wire the cooker single phase, which is up to '+A.single+' A for this cooker.');
