@@ -232,8 +232,10 @@ h3.gh .ico{width:26px;height:26px;padding:4px;border-radius:8px;background:var(-
         <div class="fgroup"><h3 class="gh"><svg class="ico" aria-hidden="true"><use href="#i-sol"/></svg>Solar and battery you already have</h3><div class="fields">
           <div class="field"><label for="hasSolar">Do you already have solar</label>
             <select id="hasSolar"><option value="no">No</option><option value="yes">Yes, file shows net use</option></select></div>
-          <div class="field"><label for="solarKw">Existing solar size (kW, 0 if none)</label>
+          <div class="field"><label for="solarKw">Existing solar panels (kW, 0 if none)</label>
             <input type="number" id="solarKw" min="0" max="40" step="0.5" value="0"></div>
+          <div class="field"><label for="solarInv">Existing solar inverter (kW, blank if unsure)</label>
+            <input type="number" id="solarInv" min="0" max="40" step="0.5" placeholder="e.g. 5"></div>
           <div class="field"><label for="hasBat">Do you already have a battery</label>
             <select id="hasBat"><option value="no">No</option><option value="yes">Yes</option></select></div>
           <div class="field" id="batKwhWrap" style="display:none"><label for="batKwh">Size of existing battery (usable kWh)</label>
@@ -455,7 +457,7 @@ function hourly(arr,S){const o=new Float64Array(24),per=60/S.iv;for(let i=0;i<S.
 /* ---------- existing solar add-back ---------- */
 // Net metering hides the part of the load that rooftop solar supplied directly. Estimate it from a typical Adelaide
 // generation shape and add it back: add-back = estimated generation minus what the file shows exported (never below zero).
-function solarAddBack(S,kw){
+function solarAddBack(S,kw,invKw){
   const n=S.n,out=new Float64Array(S.N);let genSum=0,addSum=0;
   S.days.forEach((d,di)=>{
     const y=+d.slice(0,4),m=+d.slice(4,6)-1,dd=+d.slice(6,8);
@@ -464,7 +466,7 @@ function solarAddBack(S,kw){
     const peak=MONTH_YIELD[m]*kw*Math.PI/(2*dl);
     for(let i=0;i<n;i++){
       const t=(i+0.5)*S.iv/60,x=(t-sr)/dl;if(x<=0||x>=1)continue;
-      const g=peak*Math.sin(Math.PI*x)*S.iv/60;genSum+=g;
+      const g0=peak*Math.sin(Math.PI*x)*S.iv/60,g=invKw>0?Math.min(g0,invKw*S.iv/60):g0;genSum+=g;
       const a=S.bK.length?Math.max(0,g-S.gen[di*n+i]):g*0.4;out[di*n+i]=a;addSum+=a}});
   const nd=S.days.length;return{add:out,genDay:genSum/nd,addDay:addSum/nd,expDay:sum(S.gen)/nd}
 }
@@ -550,7 +552,7 @@ function applyCirc(o,peakKw,hr,design,hasCL){
 /* ---------- sizing ---------- */
 function sizing(S,o){
   const nd=S.days.length,n=S.n;const hasE2=!!S.per.E2;const hasCL=o.hws==='cl'&&hasE2;
-  const sol=(o.solarKw>0)?solarAddBack(S,o.solarKw):null;
+  const sol=(o.solarKw>0)?solarAddBack(S,o.solarKw,o.solarInv):null;
   const tot=sol?S.tot.map((v,i)=>v+sol.add[i]):S.tot;
   const Lb=(hasCL&&o.scope==='excl')?tot.map((v,i)=>v-S.per.E2[i]):tot;
   const dsB=dailySums(Lb,n,nd),dsT=dailySums(tot,n,nd);
@@ -657,7 +659,7 @@ function buildCookSel(){const s=$('cookSize'),cur=s.value||'mid';let h='',g='';O
 function syncCookWire(){const k=$('cookSize').value,c=COOK[k]||COOK.mid,w=$('cookWire');if(w.dataset.m===k)return;w.dataset.m=k;const cur=w.value,nm={single:'Single phase',two:'Two phase',three:'Three phase'};w.innerHTML=c.ph.map(p=>'<option value="'+p+'">'+nm[p]+'</option>').join('');w.value=c.ph.indexOf(cur)>=0?cur:c.ph[0]}
 function cookOpts(){if($('cookSw').value!=='ind')return{cookOn:false,cookKw:0,cookDay:0};syncCookWire();const c=COOK[$('cookSize').value]||COOK.mid;return{cookOn:true,cookName:c.n,cookCalc:!!c.calc,cookNoThree:!!c.msg,cookMax:c.kw,cookBk:$('cookBk').value,cookKw:c.kw*0.5,cookDay:$('cookKh').value===''?2.5:Math.max(0,+$('cookKh').value||0),cookWire:$('cookWire').value,cookAmps:c.a}}
 function gwOpts(){if($('gwSw').value!=='hp')return{gwOn:false,gwKw:0,gwDay:0};const m=GWM[$('gwModel').value]||GWM.gen;return{gwOn:true,gwModel:m,gwBk:$('gwBk').value,gwKw:m.kw,gwDay:$('gwKh').value===''?m.day:Math.max(0,+$('gwKh').value||0)}}
-function readOpts(){return Object.assign(cookOpts(),gwOpts(),{phase:$('phase').value,hws:$('hws').value,scope:$('scope').value,hours:Math.max(6,Math.min(96,+$('hours').value||24)),pct:+$('pct').value,hasSolar:$('hasSolar').value,solarKw:Math.max(0,Math.min(40,+$('solarKw').value||0)),evHas:$('evHas').value,evKm:Math.max(0,+$('evKm').value||0),evUnit:$('evUnit').value,evWhen:$('evWhen').value,evChg:$('evChg').value,evSize:$('evSize').value,evPer:Math.max(0,+$('evPer').value||0),evWk:Math.max(0,+$('evWk').value||0),evN:Math.max(1,Math.min(6,Math.round(+$('evN').value||1)))})}
+function readOpts(){return Object.assign(cookOpts(),gwOpts(),{phase:$('phase').value,hws:$('hws').value,scope:$('scope').value,hours:Math.max(6,Math.min(96,+$('hours').value||24)),pct:+$('pct').value,hasSolar:$('hasSolar').value,solarKw:Math.max(0,Math.min(40,+$('solarKw').value||0)),solarInv:Math.max(0,Math.min(40,+$('solarInv').value||0)),evHas:$('evHas').value,evKm:Math.max(0,+$('evKm').value||0),evUnit:$('evUnit').value,evWhen:$('evWhen').value,evChg:$('evChg').value,evSize:$('evSize').value,evPer:Math.max(0,+$('evPer').value||0),evWk:Math.max(0,+$('evWk').value||0),evN:Math.max(1,Math.min(6,Math.round(+$('evN').value||1)))})}
 
 /* ---------- existing system (battery already installed) ---------- */
 let EXM=null,SEff=null,REAL=null;
@@ -755,12 +757,14 @@ function renderWhatIf(o){const el=$('whatIf');
 
 function run0(){
   if(!S)return;const o=readOpts();if(o.hasSolar!=='yes'||S.existing)o.solarKw=0;if(o.evHas!=='plan')o.evKm=0;syncEvCirc(o);o.circ=readCirc();haveEvCirc(o);SZ=sizing(S,o);const msgs=[];
-  {const fw=id=>$(id).closest('.field'),sS=o.hasSolar==='yes',sE=o.evHas==='plan',sH=o.evHas!=='no';fw('solarKw').style.display=sS?'':'none';fw('evKm').style.display=sE?'':'none';fw('evWhen').style.display=sE?'':'none';$('evChgWrap').style.display=sH?'':'none';$('evNWrap').style.display=sH?'':'none';['cookSizeWrap','cookWireWrap','cookBkWrap','cookKhWrap'].forEach(id=>$(id).style.display=o.cookOn?'':'none');['gwModelWrap','gwBkWrap','gwKhWrap'].forEach(id=>$(id).style.display=o.gwOn?'':'none');$('evModelWrap').style.display=sH?'':'none';$('evSizeWrap').style.display=o.evHas==='have'?'':'none';$('evPerWrap').style.display=(o.evHas==='have'&&o.evSize==='house')?'':'none'}
+  {const fw=id=>$(id).closest('.field'),sS=o.hasSolar==='yes',sE=o.evHas==='plan',sH=o.evHas!=='no';fw('solarKw').style.display=sS?'':'none';fw('solarInv').style.display=sS?'':'none';fw('evKm').style.display=sE?'':'none';fw('evWhen').style.display=sE?'':'none';$('evChgWrap').style.display=sH?'':'none';$('evNWrap').style.display=sH?'':'none';['cookSizeWrap','cookWireWrap','cookBkWrap','cookKhWrap'].forEach(id=>$(id).style.display=o.cookOn?'':'none');['gwModelWrap','gwBkWrap','gwKhWrap'].forEach(id=>$(id).style.display=o.gwOn?'':'none');$('evModelWrap').style.display=sH?'':'none';$('evSizeWrap').style.display=o.evHas==='have'?'':'none';$('evPerWrap').style.display=(o.evHas==='have'&&o.evSize==='house')?'':'none'}
   $('batKwhWrap').style.display=$('hasBat').value==='yes'?'':'none';
   SZ.exBat=$('hasBat').value==='yes'?Math.max(0,+$('batKwh').value||0):0;SZ.addKwh=Math.max(0,Math.ceil((SZ.kwh-SZ.exBat)*2)/2);
   const chs=S.eK.map(k=>k+(k==='E2'?' (controlled load)':k==='E1'?' (general)':'')).concat(S.bK.map(k=>k+' (export)')).join(', ');
   $('dataChip').className='chip'+(isSample?' warn':' good');
   $('dataChip').textContent=isSample?'Example data, upload yours to replace':'Using '+sourceName;
+  if(SZ.sol&&o.solarInv>0){const need=SZ.kNeed,inv=o.solarInv,lim=SZ.phase==='single'?10:30;
+    msgs.push('Existing solar inverter: '+fmt(inv,1)+' kW'+' on '+fmt(o.solarKw,1)+' kW of panels'+'. '+(need>inv+0.001?'This sizing needs '+fmt(need,1)+' kW of inverter, which is more than you have. Your installer could replace it with one of about '+fmt(need,1)+' kW, or keep it and add a second inverter of about '+fmt(Math.ceil((need-inv)*2)/2,1)+' kW alongside it. Together the inverters need to stay within the network limit of '+lim+' kW.':'It is as large as the '+fmt(need,1)+' kW this sizing needs, but an ordinary solar inverter does not run the house in a blackout. Backup needs a hybrid or battery inverter, so ask whether yours can do that or must be replaced.'))}
   if(SZ.sol){const q=SZ.sol,tot=avg(SZ.dsT);msgs.push('Existing '+o.solarKw+' kW solar: it is estimated to produce about '+q.genDay.toFixed(1)+' kWh a day on average'+(S.bK.length?', of which about '+q.expDay.toFixed(1)+' kWh is exported (from the file)':'')+'. About '+q.addDay.toFixed(1)+' kWh a day ('+Math.round(100*q.addDay/tot)+'% of the estimated household use of '+tot.toFixed(1)+' kWh a day) was used straight away and is hidden by net metering, so it has been added back. '+(S.bK.length?'':'The file has no export channel, so 40% of generation is assumed used on site. ')+'Generation is a typical Adelaide estimate, not measured. This page is for houses with no solar or solar only, with no battery fitted yet.')}
   else if(!S.existing&&(S.bK.length||o.hasSolar==='yes'))msgs.push('This file includes solar export or you have solar installed. The meter then shows net use, so the real household load is higher than shown and every size below is a minimum. Enter the size of your existing solar (kW of panels) and the daytime use will be estimated and added back.');
   if(SZ.evDay>0)msgs.push('EV: '+(o.evN>1?o.evN+' cars, each ':'')+o.evKm+' km '+(o.evUnit==='week'?'a week':'a day')+' at '+fmt(evEff()*100,0)+' kWh per 100 km'+($('evModel').value!==''?(D.ev[+$('evModel').value].g?' (average of the models in the list, rated range plus 15% for real driving)':' ('+D.ev[+$('evModel').value].m+' '+D.ev[+$('evModel').value].n+', rated range plus 15% for real driving)'):'')+' is about '+SZ.evDay.toFixed(1)+' kWh a day'+(o.evN>1?' in total':'')+'. '+(SZ.evWhen==='solar'?'Charging from solar, so this was added to the solar target. ':'Charging overnight from the grid at off-peak, so no extra solar is needed. ')+'The planned EV is not counted in the backup battery or inverter size.');
@@ -952,7 +956,7 @@ const FB_TO='acmkuiper@gmail.com',FB_SUBJ='NEM12 battery sizing page: feedback o
 function fbSummary(){
   if(!S||!SZ)return'';const o=readOpts(),L=[];
   L.push('Source: '+(S.existing?'existing system, '+(EXM.mode==='app'?'app readings: avg '+fmt(EXM.avg,1)+' kWh, heaviest '+fmt(EXM.heavy,1)+' kWh, peak '+(EXM.pkGiven?fmt(EXM.peak,1)+' kW':'not given')+', car in readings '+EXM.carIn:'estimated from file'):S.manual?'typed-in bill figures ('+$('srcMode').value+')':isSample?'example house':'NEM12 file')+', '+S.days.length+' days'+(S.manual||S.existing?'':', '+S.iv+'-minute readings, channels '+S.eK.concat(S.bK).join(' ')));
-  L.push('House: phase '+o.phase+', hot water '+o.hws+', solar '+(o.hasSolar==='yes'?o.solarKw+' kW':'no')+', battery '+($('hasBat').value==='yes'?($('batKwh').value||'?')+' kWh':'no')+(o.gwOn?', heat pump hot water planned ('+o.gwBk+' in blackout)':'')+(o.cookOn?', induction cooker planned ('+$('cookSize').value+', '+o.cookWire+' phase wiring, '+o.cookBk+' in blackout)':'')+', EV '+o.evHas+(o.evHas!=='no'?' x'+o.evN:'')+(o.evHas==='have'?' ('+o.evSize+')':'')+', '+o.hours+' h without grid, '+o.pct+'th percentile day');
+  L.push('House: phase '+o.phase+', hot water '+o.hws+', solar '+(o.hasSolar==='yes'?o.solarKw+' kW'+(o.solarInv>0?' on a '+o.solarInv+' kW inverter':''):'no')+', battery '+($('hasBat').value==='yes'?($('batKwh').value||'?')+' kWh':'no')+(o.gwOn?', heat pump hot water planned ('+o.gwBk+' in blackout)':'')+(o.cookOn?', induction cooker planned ('+$('cookSize').value+', '+o.cookWire+' phase wiring, '+o.cookBk+' in blackout)':'')+', EV '+o.evHas+(o.evHas!=='no'?' x'+o.evN:'')+(o.evHas==='have'?' ('+o.evSize+')':'')+', '+o.hours+' h without grid, '+o.pct+'th percentile day');
   if(FIND.length)L.push('Noticed in file: '+FIND.map(f=>f.k+' = '+f.ans).join('; '));
   L.push('Result: battery '+fmt(SZ.kwh,1)+' kWh, inverter '+fmt(SZ.kNeed,1)+' kW, '+SZ.phase+' phase, solar '+fmt(SZ.solar,1)+' kW'+(SZ.solarKw>0?' (existing '+SZ.solarKw+' kW)':''));
   L.push('Design day '+fmt(SZ.design,1)+' kWh, busiest day '+fmt(SZ.worst,1)+' kWh, peak '+fmt(SZ.peakKw,1)+' kW, average day '+fmt(avg(SZ.dsT),1)+' kWh');
@@ -1003,7 +1007,7 @@ $('file').addEventListener('change',e=>{const f=e.target.files[0];if(!f)return;f
 const drop=$('drop');['dragenter','dragover'].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.add('over')}));
 ['dragleave','drop'].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.remove('over')}));
 drop.addEventListener('drop',e=>{const f=e.dataTransfer.files[0];if(f)f.text().then(t=>load(t,f.name,false))});
-['gwSw','gwModel','gwBk','cookSw','cookSize','cookWire','cookBk','evSize','evChg','hasBat','phase','hws','scope','hours','pct','hasSolar','solarKw','evHas','evKm','evUnit','evWhen'].forEach(id=>$(id).addEventListener('change',run));buildCookSel();buildTar();(function(){const s=$('evModel');D.ev.forEach((e,i)=>{const o=document.createElement('option');o.value=i;o.textContent=e.g?'Average EV, not sure which':e.m+' '+e.n+' ('+e.b+' kWh)';s.appendChild(o)});s.addEventListener('change',()=>{const v=s.value;if(v!==''){const e=D.ev[+v];$('evChg').value=e.g?'unsure':e.ac>=10?'11':'7.4';evTyTouched=false}run()})})();$('dlRpt').addEventListener('click',()=>{try{window.print()}catch(e){alert('Use your browser Print command and choose Save as PDF.')}});$('tarDet').addEventListener('input',e=>{const el=e.target;if(el.dataset.f==='p'&&el.dataset.t==='u'&&TOU.find(r=>r.k===el.dataset.k&&r.of))el.dataset.own=el.value===''?'':'1';syncTar();saveTar()});$('tarDet').addEventListener('change',()=>{syncTar();saveTar()});buildCirc();$('circBox').addEventListener('change',e=>{if(e.target.matches('[data-c=ev] [data-f=ty]'))evTyTouched=true;syncCirc();run()});$('circBox').addEventListener('input',e=>{if(e.target.type==='number')run()});$('solarKw').addEventListener('input',run);$('evN').addEventListener('input',run);$('cookKh').addEventListener('input',run);$('gwKh').addEventListener('input',run);['exGoal','exInv','exCarIn'].forEach(id=>$(id).addEventListener('change',run));['exInvKw','exAvg','exHeavy','exPeak'].forEach(id=>$(id).addEventListener('input',run));$('batKwh').addEventListener('input',run);$('evKm').addEventListener('input',run);$('evPer').addEventListener('input',run);$('evWk').addEventListener('input',run);
+['gwSw','gwModel','gwBk','cookSw','cookSize','cookWire','cookBk','evSize','evChg','hasBat','phase','hws','scope','hours','pct','hasSolar','solarKw','solarInv','evHas','evKm','evUnit','evWhen'].forEach(id=>$(id).addEventListener('change',run));buildCookSel();buildTar();(function(){const s=$('evModel');D.ev.forEach((e,i)=>{const o=document.createElement('option');o.value=i;o.textContent=e.g?'Average EV, not sure which':e.m+' '+e.n+' ('+e.b+' kWh)';s.appendChild(o)});s.addEventListener('change',()=>{const v=s.value;if(v!==''){const e=D.ev[+v];$('evChg').value=e.g?'unsure':e.ac>=10?'11':'7.4';evTyTouched=false}run()})})();$('dlRpt').addEventListener('click',()=>{try{window.print()}catch(e){alert('Use your browser Print command and choose Save as PDF.')}});$('tarDet').addEventListener('input',e=>{const el=e.target;if(el.dataset.f==='p'&&el.dataset.t==='u'&&TOU.find(r=>r.k===el.dataset.k&&r.of))el.dataset.own=el.value===''?'':'1';syncTar();saveTar()});$('tarDet').addEventListener('change',()=>{syncTar();saveTar()});buildCirc();$('circBox').addEventListener('change',e=>{if(e.target.matches('[data-c=ev] [data-f=ty]'))evTyTouched=true;syncCirc();run()});$('circBox').addEventListener('input',e=>{if(e.target.type==='number')run()});$('solarKw').addEventListener('input',run);$('evN').addEventListener('input',run);$('cookKh').addEventListener('input',run);$('gwKh').addEventListener('input',run);['exGoal','exInv','exCarIn'].forEach(id=>$(id).addEventListener('change',run));['exInvKw','exAvg','exHeavy','exPeak'].forEach(id=>$(id).addEventListener('input',run));$('batKwh').addEventListener('input',run);$('evKm').addEventListener('input',run);$('evPer').addEventListener('input',run);$('evWk').addEventListener('input',run);
 window.__BS={parseNEM12,buildSeries,sizing,recommend,load,get S(){return S},get SZ(){return SZ}};
 load(sample(),'example',true);
 })();
