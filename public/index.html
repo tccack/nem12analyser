@@ -823,6 +823,14 @@ function run0(){
   const EV=S.existing&&REAL?REAL:S,TT=S.existing&&REAL?REAL.tot:SZ.tot;
   const pks=topPeaks(TT,EV,10);
   const ds=S.existing&&REAL?(()=>{const a=[];for(let d=0;d<EV.days.length;d++){let s=0;for(let i=0;i<EV.n;i++)s+=TT[d*EV.n+i];a.push(s)}return a})():SZ.dsT;const order=Array.from(ds.keys()).sort((a,b)=>ds[b]-ds[a]).slice(0,10);
+  const hasGen=!S.manual&&EV.bK&&EV.bK.length&&EV.gen&&sum(EV.gen)>0;let solHtml='';
+  if(hasGen){const gp=topPeaks(EV.gen,EV,10),gd=dailySums(EV.gen,EV.n,EV.days.length),go=Array.from(gd.keys()).sort((a,b)=>gd[b]-gd[a]).slice(0,10);
+    solHtml=`<div class="grid2" style="grid-template-columns:minmax(0,1fr) minmax(0,1fr)">
+   <div class="panel"><h3>Highest solar power sent to the grid</h3><div class="scroll"><table><tr><th>When</th><th class="n">kW</th></tr>${gp.map(p=>`<tr><td>${esc(dlabel(p.d))}, ${tl(p.s,EV.iv)}</td><td class="n">${fmt(p.kw,2)}</td></tr>`).join('')}</table></div>
+     <p class="muted" style="font-size:12.5px;margin-top:8px">Ten separate events from the export channel (${esc(EV.bK.join(', '))}). Each reading is a ${EV.iv}-minute average.</p></div>
+   <div class="panel"><h3>Ten biggest solar export days</h3><div class="scroll"><table><tr><th>Day</th><th class="n">kWh</th></tr>${go.map(di=>`<tr><td>${esc(dlabel(EV.days[di]))}</td><td class="n">${fmt(gd[di],1)}</td></tr>`).join('')}</table></div>
+     <p class="muted" style="font-size:12.5px;margin-top:8px">Only the solar that went out to the grid is in the file. Your panels made more than this whenever the house used the sun directly or a battery was charging, so real output is higher.</p></div>
+  </div>`}
   const hrT=hourly(SZ.tot,S),hrB=SZ.hasCL&&SZ.scope==='excl'?hourly(SZ.Lb,S):null;
   let t10='';order.forEach(di=>{const w=topWindows(TT,EV,di,3);
     t10+=`<tr><td>${esc(dlabel(EV.days[di]))}</td><td class="n">${fmt(ds[di],1)}</td><td>${w.map(x=>`<div class="mono" style="font-size:12.5px">${tl(x.s,EV.iv)}–${tl(x.e%EV.n,EV.iv)} &nbsp;${fmt(x.kwh,1)} kWh &nbsp;peak ${fmt(x.kw,1)} kW</div>`).join('')}</td></tr>`});
@@ -833,9 +841,9 @@ function run0(){
    <div class="panel"><h3>Highest power (separate events)</h3><div class="scroll"><table><tr><th>When</th><th class="n">kW</th></tr>${pks.map(p=>`<tr><td>${esc(dlabel(p.d))}, ${tl(p.s,EV.iv)}</td><td class="n">${fmt(p.kw,2)}</td></tr>`).join('')}</table></div>
      <p class="muted" style="font-size:12.5px;margin-top:8px">All channels added together. Each reading is a ${EV.iv}-minute average.</p></div>
    <div class="panel"><h3>Ten heaviest days and their busiest hours</h3><div class="scroll"><table><tr><th>Day</th><th class="n">kWh</th><th>Three busiest one-hour periods</th></tr>${t10}</table></div></div>
-  </div>`;
+  </div>${solHtml}`;
   $('evidence').firstElementChild.insertAdjacentHTML('afterend',trustNote(EV));
-  if(S.existing&&REAL){const g=$('evidence').querySelector('.grid2'),h=$('evidence').firstElementChild;$('evidence').innerHTML='<div><h2 class="hi"><svg class="ico" aria-hidden="true"><use href="#i-chart"/></svg>What your data shows</h2></div>'+trustNote(EV)+g.outerHTML}
+  if(S.existing&&REAL){const g=[...$('evidence').querySelectorAll('.grid2')].map(x=>x.outerHTML).join(''),h=$('evidence').firstElementChild;$('evidence').innerHTML='<div><h2 class="hi"><svg class="ico" aria-hidden="true"><use href="#i-chart"/></svg>What your data shows</h2></div>'+trustNote(EV)+g}
   else if(S.manual)$('evidence').innerHTML='<div class="panel"><h2>What your data shows</h2><p class="muted">No charts are drawn for typed-in figures, because they would show an estimated pattern, not your real use. Upload a NEM12 file to see your own busiest days and highest power.</p></div>';
   // method
   const dm=SZ.dm;
