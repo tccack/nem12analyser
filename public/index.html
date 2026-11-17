@@ -161,6 +161,9 @@ h3.gh .ico{width:26px;height:26px;padding:4px;border-radius:8px;background:var(-
 .fgroup .fields{grid-template-columns:repeat(2,minmax(0,1fr));align-items:end}
 .fgroup .field>label{line-height:1.3}
 #fileStatus{overflow-wrap:anywhere;word-break:break-all}
+.tbar{display:block;height:7px;border-radius:4px;background:var(--accent);margin:3px 0 0 auto;min-width:2px}.tbar.now{background:var(--muted);opacity:.55}
+.tradio{display:flex;gap:10px;align-items:flex-start;padding:10px 12px;border:1px solid var(--line);border-radius:6px;margin:8px 0;cursor:pointer;background:var(--bg)}.tradio input{margin-top:3px;width:auto}
+.tradio.on{border-color:var(--accent)}
 .fgroup.net p{margin:0}
 @media(max-width:560px){.fgroup .fields{grid-template-columns:minmax(0,1fr)}}
 .fgroup select,.fgroup input[type=number]{height:40px}
@@ -328,6 +331,7 @@ h3.gh .ico{width:26px;height:26px;padding:4px;border-radius:8px;background:var(-
   </section>
   <section id="summary"></section>
   <section id="whatIf" style="margin-top:16px"></section>
+  <section id="testNums" style="margin-top:16px"></section>
   <section id="evidence"></section>
   <section id="method"></section>
   <section id="feedback" class="panel" style="margin-top:16px">
@@ -458,7 +462,7 @@ function hourly(arr,S){const o=new Float64Array(24),per=60/S.iv;for(let i=0;i<S.
 // Net metering hides the part of the load that rooftop solar supplied directly. Estimate it from a typical Adelaide
 // generation shape and add it back: add-back = estimated generation minus what the file shows exported (never below zero).
 function solarAddBack(S,kw,invKw){
-  const n=S.n,out=new Float64Array(S.N);let genSum=0,addSum=0;
+  const n=S.n,out=new Float64Array(S.N),genA=new Float64Array(S.N);let genSum=0,addSum=0;
   S.days.forEach((d,di)=>{
     const y=+d.slice(0,4),m=+d.slice(4,6)-1,dd=+d.slice(6,8);
     const doy=Math.round((Date.UTC(y,m,dd)-Date.UTC(y,0,0))/864e5);
@@ -466,10 +470,68 @@ function solarAddBack(S,kw,invKw){
     const peak=MONTH_YIELD[m]*kw*Math.PI/(2*dl);
     for(let i=0;i<n;i++){
       const t=(i+0.5)*S.iv/60,x=(t-sr)/dl;if(x<=0||x>=1)continue;
-      const g0=peak*Math.sin(Math.PI*x)*S.iv/60,g=invKw>0?Math.min(g0,invKw*S.iv/60):g0;genSum+=g;
+      const g0=peak*Math.sin(Math.PI*x)*S.iv/60,g=invKw>0?Math.min(g0,invKw*S.iv/60):g0;genSum+=g;genA[di*n+i]=g;
       const a=S.bK.length?Math.max(0,g-S.gen[di*n+i]):g*0.4;out[di*n+i]=a;addSum+=a}});
-  const nd=S.days.length;return{add:out,genDay:genSum/nd,addDay:addSum/nd,expDay:sum(S.gen)/nd}
+  const nd=S.days.length;return{add:out,gen:genA,genDay:genSum/nd,addDay:addSum/nd,expDay:sum(S.gen)/nd}
 }
+
+
+/* ---------- test some numbers: last year again with solar and battery changes ---------- */
+let TESTSEL=null;
+function testYear(S,SZ,o,opt){
+  const n=S.n,nd=S.days.length,dt=S.iv/60;let start=Math.max(0,nd-365);
+  {const cnt=new Map();for(let di=start;di<nd;di++){const k=S.days[di].slice(0,6);cnt.set(k,(cnt.get(k)||0)+1)}
+   const fk=S.days[start].slice(0,6);if(start>0&&cnt.get(fk)<10){while(start<nd&&S.days[start].slice(0,6)===fk)start++}}
+  const ph=SZ.phase==='three'?SAPN.three:SAPN.single,expCap=ph.exp*dt;
+  const P=SZ.kNeed*dt,cap=SZ.kwh,eta=0.95;
+  const sol0=o.solarKw>0?solarAddBack(S,o.solarKw,o.solarInv):null;
+  const g0=sol0?sol0.gen:null;
+  let g1=g0;
+  if(opt!=='keep'){const kw=SZ.solar;g1=solarAddBack(S,kw,Math.max(SZ.kNeed,kw/1.3)).gen}
+  const load=SZ.tot,E=S.tot,B=S.gen,mon=new Map();
+  let soc=0;
+  for(let di=start;di<nd;di++){
+    const k=S.days[di].slice(0,6);let m=mon.get(k);if(!m){m={k,days:0,cI:0,wI:0,cE:0,wE:0};mon.set(k,m)}m.days++;
+    for(let s=0;s<n;s++){
+      const i=di*n+s,L=load[i],a=g0?g0[i]:0,b=g1?g1[i]:0;
+      // baseline: what the house does today in the same model (no battery)
+      const d0=L-a,imp0=d0>0?d0:0,exp0=d0<0?Math.min(-d0,expCap):0;
+      // scenario with a battery
+      const d1=L-b;let imp1=0,exp1=0;
+      if(d1>0){const del=Math.min(d1,P,soc*eta);soc-=del/eta;imp1=d1-del}
+      else if(d1<0){const sur=-d1,ch=Math.min(sur,P,(cap-soc)/eta);soc+=ch*eta;exp1=Math.min(sur-ch,expCap)}
+      m.cI+=E[i];m.cE+=B[i];
+      m.wI+=Math.max(0,E[i]-(imp0-imp1));m.wE+=Math.max(0,B[i]+(exp1-exp0));
+    }}
+  return [...mon.values()]}
+function renderTest(o){
+  const el=$('testNums');if(!el)return;
+  if(!S||S.manual||S.existing||!SZ||$('hasBat').value==='yes'){el.innerHTML='';return}
+  const hasExp=S.bK&&S.bK.length&&sum(S.gen)>0;
+  const head=`<div class="panel"><h2 class="hi" style="margin:0 0 6px"><svg class="ico" aria-hidden="true"><use href="#i-chart"/></svg>Want to test some numbers?</h2>`;
+  if(hasExp&&!(o.solarKw>0)){el.innerHTML=head+`<p class="muted" style="margin:6px 0 0">Your file shows solar export. Enter the size of your existing solar panels in the form above and this section will let you test adding a battery or upgrading your solar.</p></div>`;return}
+  const opts=[];
+  if(o.solarKw>0){opts.push({k:'keep',t:'Leave my existing solar as it is and just add the recommended battery capacity',d:fmt(SZ.kwh,1)+' kWh battery, '+fmt(SZ.kNeed,1)+' kW, with your '+fmt(o.solarKw,1)+' kW of panels unchanged'});
+    if(SZ.solar>o.solarKw+0.25)opts.push({k:'upgrade',t:'Upgrade my solar and add the recommended battery capacity',d:fmt(SZ.kwh,1)+' kWh battery, '+fmt(SZ.kNeed,1)+' kW, and '+fmt(SZ.solar,1)+' kW of panels in total'})}
+  else opts.push({k:'new',t:'Install the recommended solar and battery capacity',d:fmt(SZ.kwh,1)+' kWh battery, '+fmt(SZ.kNeed,1)+' kW, and '+fmt(SZ.solar,1)+' kW of panels'});
+  if(!opts.some(x=>x.k===TESTSEL))TESTSEL=opts[0].k;
+  const sel=TESTSEL,ms=testYear(S,SZ,o,sel);
+  const T=ms.reduce((a,m)=>({cI:a.cI+m.cI,wI:a.wI+m.wI,cE:a.cE+m.cE,wE:a.wE+m.wE,days:a.days+m.days}),{cI:0,wI:0,cE:0,wE:0,days:0});
+  const mx=Math.max(1,...ms.map(m=>Math.max(m.cI,m.wI)));
+  const pc=T.cI>0?Math.round(100*(T.cI-T.wI)/T.cI):0;
+  const mname=k=>MON[+k.slice(4,6)-1]+' '+k.slice(0,4);
+  const rows=ms.map(m=>`<tr><td style="white-space:nowrap">${mname(m.k)}${m.days<27?` <span class="muted" style="font-size:12px">(${m.days} days)</span>`:''}</td><td class="n">${fmt(m.cI,0)}<span class="tbar now" style="width:${(100*m.cI/mx).toFixed(0)}%"></span></td><td class="n">${fmt(m.wI,0)}<span class="tbar" style="width:${(100*m.wI/mx).toFixed(0)}%"></span></td><td class="n">${fmt(m.cI-m.wI,0)}</td><td class="n">${fmt(m.cE,0)}</td><td class="n">${fmt(m.wE,0)}</td></tr>`).join('');
+  el.innerHTML=head+`
+   <p class="muted" style="margin:0 0 4px">Your own meter readings from the last ${T.days} days, run again as if the change below had been made, month by month. All figures are kWh bought from the grid, or exported to it. Only kWh and kW are used, no brands.</p>
+   ${opts.map(x=>`<label class="tradio${x.k===sel?' on':''}"><input type="radio" name="tsel" value="${x.k}"${x.k===sel?' checked':''}><span><b>${esc(x.t)}</b><br><span class="muted" style="font-size:13px">${esc(x.d)}</span></span></label>`).join('')}
+   <div class="stats" style="grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:12px 0">
+     <div class="stat"><span class="k">Bought from the grid now</span><span class="v" style="font-size:24px">${fmt(T.cI,0)}<small>kWh</small></span></div>
+     <div class="stat"><span class="k">Would have bought</span><span class="v" style="font-size:24px">${fmt(T.wI,0)}<small>kWh</small></span><span class="w">${pc>=0?pc+'% less':Math.abs(pc)+'% more'}</span></div>
+     <div class="stat"><span class="k">Exported: now / would have</span><span class="v" style="font-size:24px">${fmt(T.cE,0)}<small>/</small>${fmt(T.wE,0)}<small>kWh</small></span></div>
+   </div>
+   <div class="scroll"><table><tr><th>Month</th><th class="n">Currently use</th><th class="n">Would have used</th><th class="n">Less by</th><th class="n">Exported now</th><th class="n">Would export</th></tr>${rows}</table></div>
+   <p class="muted" style="font-size:12.5px;margin:10px 0 0"><b>This is not a forecast.</b> It replays last year, and the future will not repeat it. We do not know how you will use power from now on, your tariffs, your budget, or what your installer would fit. No costs or savings in dollars are shown for that reason. How it works: your readings are kept as they were, solar is a typical Adelaide year (not measured), and the battery is simple: it charges from spare solar, covers the house when the sun is short, loses about 10% going in and out, never charges from the grid, and keeps nothing in reserve for a blackout. Extras such as an EV, induction cooking or a heat pump are not included, and neither is a change from single to three phase. Exports are limited to the SA Power Networks cap. Solar upgrades assume an inverter of at least 1 kW for every 1.3 kW of panels. Treat the result as a rough guide to the size of the difference, and ask installers for their own modelling.</p></div>`;
+  el.querySelectorAll('input[name=tsel]').forEach(r=>r.addEventListener('change',()=>{TESTSEL=r.value;renderTest(o)}))}
 
 /* ---------- tariff inputs (recorded only, not yet used in sizing) ---------- */
 const TOU=[
@@ -822,7 +884,7 @@ function run0(){
    <div class="stat solarStat"><span class="k">${ic('sol')}Solar</span><span class="v">${SZ.solarKw>0?fmt(Math.max(0,SZ.solar-SZ.solarKw),1)+'<small>kW to add</small>':fmt(SZ.solar,1)+'<small>kW of panels</small>'}</span><span class="w">${SZ.solarKw>0?(SZ.solar>SZ.solarKw?'Target '+fmt(SZ.solar,1)+' kW in total, you have '+fmt(SZ.solarKw,1)+' kW. ':'Your '+fmt(SZ.solarKw,1)+' kW already meets the '+fmt(SZ.solar,1)+' kW target. '):''}Sized for ${SZ.assumed?'a typical June':MON[SZ.dm.mon]} with ${fmt(SZ.dm.mean,1)} kWh a day of use.</span></div>
   </div>`;
   if(S.existing){const ss=$('summary').querySelector('.solarStat');if(ss)ss.remove();$('summary').insertAdjacentHTML('beforeend',exPanel())}
-  renderWhatIf(o);
+  renderWhatIf(o);renderTest(o);
   // evidence
   const EV=S.existing&&REAL?REAL:S,TT=S.existing&&REAL?REAL.tot:SZ.tot;
   const pks=topPeaks(TT,EV,10);
