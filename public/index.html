@@ -386,11 +386,14 @@ const tl=(s,iv)=>{const m=s*iv;return String(Math.floor(m/60)).padStart(2,'0')+'
 $('built').textContent=D.built;
 
 /* ---------- NEM12 ---------- */
+let FILENMI='',TESTWX=null;
 function parseNEM12(text){
+  FILENMI='';TESTWX=null;
   const ch={};let cur=null,iv=null,bad=0,skipped=new Set();
   for(const ln of text.split(/\r?\n/)){
     if(!ln)continue;const f=ln.split(',');const t=f[0];
     if(t==='200'){
+      if(!FILENMI)FILENMI=(f[1]||'').trim().toUpperCase();
       const suffix=(f[4]||f[3]||'').trim().toUpperCase();const uom=(f[7]||'').trim().toUpperCase();const ivl=parseInt(f[8],10);
       const scale=uom==='KWH'?1:uom==='WH'?0.001:uom==='MWH'?1000:0;
       if(!scale||!ivl||1440%ivl){cur=null;skipped.add(suffix||'?');continue}
@@ -482,16 +485,16 @@ function solarAddBack(S,kw,invKw,useWx){
 
 /* ---------- test some numbers: last year again with solar and battery changes ---------- */
 let TESTSEL=null;
-function testYear(S,SZ,o,opt){
+function testYear(S,SZ,o,opt,useWx){
   const n=S.n,nd=S.days.length,dt=S.iv/60;let start=Math.max(0,nd-365);
   {const cnt=new Map();for(let di=start;di<nd;di++){const k=S.days[di].slice(0,6);cnt.set(k,(cnt.get(k)||0)+1)}
    const fk=S.days[start].slice(0,6);if(start>0&&cnt.get(fk)<10){while(start<nd&&S.days[start].slice(0,6)===fk)start++}}
   const ph=SZ.phase==='three'?SAPN.three:SAPN.single,expCap=ph.exp*dt;
   const P=SZ.kNeed*dt,cap=SZ.kwh,eta=0.95;
-  const sol0=o.solarKw>0?solarAddBack(S,o.solarKw,o.solarInv,true):null;
+  const sol0=o.solarKw>0?solarAddBack(S,o.solarKw,o.solarInv,useWx):null;
   const g0=sol0?sol0.gen:null;
   let g1=g0;
-  if(opt!=='keep'){const kw=SZ.solar;g1=solarAddBack(S,kw,Math.max(SZ.kNeed,kw/1.3),true).gen}
+  if(opt!=='keep'){const kw=SZ.solar;g1=solarAddBack(S,kw,Math.max(SZ.kNeed,kw/1.3),useWx).gen}
   const load=SZ.tot,E=S.tot,B=S.gen,mon=new Map();
   let soc=0;
   for(let di=start;di<nd;di++){
@@ -519,7 +522,8 @@ function renderTest(o){
     if(SZ.solar>o.solarKw+0.25)opts.push({k:'upgrade',t:'Upgrade my solar and add the recommended battery capacity',d:fmt(SZ.kwh,1)+' kWh battery, '+fmt(SZ.kNeed,1)+' kW, and '+fmt(SZ.solar,1)+' kW of panels in total'})}
   else opts.push({k:'new',t:'Install the recommended solar and battery capacity',d:fmt(SZ.kwh,1)+' kWh battery, '+fmt(SZ.kNeed,1)+' kW, and '+fmt(SZ.solar,1)+' kW of panels'});
   if(!opts.some(x=>x.k===TESTSEL))TESTSEL=opts[0].k;
-  const sel=TESTSEL,ms=testYear(S,SZ,o,sel);
+  if(TESTWX===null)TESTWX=(FILENMI&&FILENMI[0]!=='2')?'other':'sa';   // SA NMIs start with 2; anything else starts as 'outside SA' (the user can change it)
+  const sa=TESTWX==='sa',sel=TESTSEL,ms=testYear(S,SZ,o,sel,sa);
   const T=ms.reduce((a,m)=>({cI:a.cI+m.cI,wI:a.wI+m.wI,cE:a.cE+m.cE,wE:a.wE+m.wE,days:a.days+m.days}),{cI:0,wI:0,cE:0,wE:0,days:0});
   const mx=Math.max(1,...ms.map(m=>Math.max(m.cI,m.wI)));
   const pc=T.cI>0?Math.round(100*(T.cI-T.wI)/T.cI):0;
@@ -534,7 +538,9 @@ function renderTest(o){
      <div class="stat"><span class="k">Exported: now / would have</span><span class="v" style="font-size:24px">${fmt(T.cE,0)}<small>/</small>${fmt(T.wE,0)}<small>kWh</small></span></div>
    </div>
    <div class="scroll"><table><tr><th>Month</th><th class="n">Currently use</th><th class="n">Would have used</th><th class="n">Less by</th><th class="n">Exported now</th><th class="n">Would export</th></tr>${rows}</table></div>
-   <p class="muted" style="font-size:12.5px;margin:10px 0 0"><b>This is not a forecast.</b> It replays last year, and the future will not repeat it. We do not know how you will use power from now on, your tariffs, your budget, or what your installer would fit. No costs or savings in dollars are shown for that reason. How it works: your readings are kept as they were, solar output follows the real Adelaide weather on each day (sunny and cloudy days from public weather records, not your own panels), and the battery is simple: it charges from spare solar, covers the house when the sun is short, loses about 10% going in and out, never charges from the grid, and keeps nothing in reserve for a blackout. Extras such as an EV, induction cooking or a heat pump are not included, and neither is a change from single to three phase. Exports are limited to the SA Power Networks cap. Solar upgrades assume an inverter of at least 1 kW for every 1.3 kW of panels. Treat the result as a rough guide to the size of the difference, and ask installers for their own modelling.</p></div>`;
+   <p class="muted" style="font-size:13px;margin:10px 0 0">Solar here uses Adelaide weather data. If your home is outside South Australia, change the zone: <select id="wxZone" style="width:auto;margin-left:6px"><option value="sa"${sa?' selected':''}>South Australia (Adelaide weather)</option><option value="other"${sa?'':' selected'}>Outside South Australia (typical sun, no daily weather)</option></select></p>
+   <p class="muted" style="font-size:12.5px;margin:10px 0 0"><b>This is not a forecast.</b> It replays last year, and the future will not repeat it. We do not know how you will use power from now on, your tariffs, your budget, or what your installer would fit. No costs or savings in dollars are shown for that reason. How it works: your readings are kept as they were, solar output ${sa?'follows the real Adelaide weather on each day (sunny and cloudy days from public weather records, not your own panels)':'uses a typical sunny-and-cloudy mix for each month, as in Adelaide (it does not follow the real weather where you are)'}, and the battery is simple: it charges from spare solar, covers the house when the sun is short, loses about 10% going in and out, never charges from the grid, and keeps nothing in reserve for a blackout. Extras such as an EV, induction cooking or a heat pump are not included, and neither is a change from single to three phase. Exports are limited to the SA Power Networks cap${sa?'':', used here only as a guide because other networks set their own limits'}. Solar upgrades assume an inverter of at least 1 kW for every 1.3 kW of panels. Treat the result as a rough guide to the size of the difference, and ask installers for their own modelling.</p></div>`;
+  const wz=el.querySelector('#wxZone');if(wz)wz.addEventListener('change',()=>{TESTWX=wz.value;renderTest(o)});
   el.querySelectorAll('input[name=tsel]').forEach(r=>r.addEventListener('change',()=>{TESTSEL=r.value;renderTest(o)}))}
 
 /* ---------- tariff inputs (recorded only, not yet used in sizing) ---------- */
