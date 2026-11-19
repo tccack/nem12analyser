@@ -168,6 +168,23 @@ h3.gh .ico{width:26px;height:26px;padding:4px;border-radius:8px;background:var(-
 @media(max-width:560px){.fgroup .fields{grid-template-columns:minmax(0,1fr)}}
 .fgroup select,.fgroup input[type=number]{height:40px}
 @media print{.hero,.heroimg{display:none!important}}
+
+/* ---------- tabs ---------- */
+.tabbar{position:sticky;top:0;z-index:20;display:flex;gap:4px;overflow-x:auto;background:var(--bg);border-bottom:1px solid var(--line);padding:8px 0 0;margin-top:4px;scrollbar-width:none}
+.tabbar::-webkit-scrollbar{display:none}
+.tabbar button{font:inherit;font-weight:600;font-size:14px;white-space:nowrap;background:transparent;color:var(--muted);border:1px solid transparent;border-bottom:none;border-radius:8px 8px 0 0;padding:9px 14px;cursor:pointer;position:relative;top:1px}
+.tabbar button:hover{color:var(--ink)}
+.tabbar button[aria-selected=true]{color:var(--accent);background:var(--surface);border-color:var(--line);border-bottom:1px solid var(--surface)}
+.tabbar button.off{opacity:.55}
+.tabbar button .dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--good);margin-left:7px;vertical-align:middle}
+.tabpane{display:none;flex-direction:column;gap:16px;padding-top:16px}
+.tabpane.on{display:flex}
+.tabpane>section{margin-top:0!important}
+.tabnote{padding:18px;border:1px dashed var(--line);border-radius:10px;text-align:center}
+.resbar{display:none;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:12px 16px;border:1px solid var(--accent);border-radius:10px;background:color-mix(in srgb,var(--accent) 8%,var(--surface))}
+.resbar.on{display:flex}
+.pnav{display:flex;justify-content:space-between;gap:10px;margin-top:4px}
+@media print{.tabbar,.pnav,.resbar,.tabnote{display:none!important}.tabpane{display:flex!important;padding-top:0}}
 #rankSec,#tarDet,.stars{display:none!important}
 </style>
 </head>
@@ -185,7 +202,9 @@ h3.gh .ico{width:26px;height:26px;padding:4px;border-radius:8px;background:var(-
     <div class="heroimg"><svg class="heroart" viewBox="0 0 580 300" role="img" aria-label="Illustration of a house with solar panels on the roof, a wall battery, an inverter and an electric car plugged in to charge"><g class="sun"><circle cx="70" cy="64" r="24"/><g class="rays"><line x1="104" y1="64" x2="116" y2="64"/><line x1="99.4448" y1="81" x2="109.837" y2="87"/><line x1="86.9999" y1="93.4449" x2="92.9999" y2="103.837"/><line x1="69.9999" y1="98" x2="69.9998" y2="110"/><line x1="52.9999" y1="93.4448" x2="46.9998" y2="103.837"/><line x1="40.555" y1="80.9998" x2="30.1627" y2="86.9998"/><line x1="36" y1="63.9998" x2="24" y2="63.9997"/><line x1="40.5553" y1="46.9997" x2="30.163" y2="40.9997"/><line x1="53.0003" y1="34.555" x2="47.0004" y2="24.1626"/><line x1="70.0004" y1="30" x2="70.0005" y2="18"/><line x1="87.0004" y1="34.5553" x2="93.0005" y2="24.1631"/><line x1="99.4451" y1="47.0004" x2="109.837" y2="41.0005"/></g></g><rect class="ground" x="0" y="250" width="580" height="50"/><g class="flow"><path class="f1" d="M338,125 L372,125 L372,176"/><path class="f2" d="M372,218 L372,268 L108,268 L108,238"/><path class="f3" d="M372,218 L372,232 L396,232"/></g><polygon class="roof" points="112,152 366,152 322,86 156,86"/><polygon class="hp" points="126.47,148.26 166.65,148.26 177.702,122.74 143.578,122.74"/><polygon class="hp" points="173.19,148.26 213.37,148.26 217.382,122.74 183.258,122.74"/><polygon class="hp" points="219.91,148.26 260.09,148.26 257.062,122.74 222.938,122.74"/><polygon class="hp" points="266.63,148.26 306.81,148.26 296.742,122.74 262.618,122.74"/><polygon class="hp" points="313.35,148.26 353.53,148.26 336.422,122.74 302.298,122.74"/><polygon class="hp" points="145.91,119.26 179.21,119.26 190.262,93.74 163.018,93.74"/><polygon class="hp" points="184.63,119.26 217.93,119.26 221.942,93.74 194.698,93.74"/><polygon class="hp" points="223.35,119.26 256.65,119.26 253.622,93.74 226.378,93.74"/><polygon class="hp" points="262.07,119.26 295.37,119.26 285.302,93.74 258.058,93.74"/><polygon class="hp" points="300.79,119.26 334.09,119.26 316.982,93.74 289.738,93.74"/><rect class="wall" x="132" y="152" width="226" height="98"/><rect class="win" x="156" y="176" width="46" height="38" rx="3"/><line class="winl" x1="179" y1="176" x2="179" y2="214"/><rect class="door" x="238" y="184" width="40" height="66" rx="3"/><rect class="win" x="302" y="176" width="34" height="38" rx="3"/><g class="bat"><rect class="bb" x="88" y="168" width="38" height="72" rx="6"/><rect class="bt" x="100" y="162" width="14" height="7" rx="2"/><rect class="bl" x="95" y="176" width="24" height="9" rx="2"/><rect class="bl" x="95" y="190" width="24" height="9" rx="2"/><rect class="bl" x="95" y="204" width="24" height="9" rx="2"/><rect class="bl dim" x="95" y="218" width="24" height="9" rx="2"/></g><g class="inv"><rect x="360" y="176" width="26" height="42" rx="4"/><path d="M365,198 q4,-9 8,0 t8,0"/></g><g class="chg"><rect x="394" y="196" width="14" height="54" rx="4"/><path d="M401,208 l-3,8 h6 l-3,8" /></g><g class="car"><path d="M430,250 v-24 q0,-8 8,-10 l22,-5 q10,-18 28,-18 h30 q16,0 26,18 l12,6 q8,3 8,11 v22 z"/><path class="cw" d="M486,198 h22 q10,0 16,12 h-52 q4,-12 14,-12z"/><circle class="tire" cx="468" cy="250" r="14"/><circle class="tire" cx="552" cy="250" r="14"/><circle class="hub" cx="468" cy="250" r="5"/><circle class="hub" cx="552" cy="250" r="5"/></g><path class="cable" d="M408,232 C420,232 424,236 432,236"/></svg></div>
   </header>
   <div id="rptHead"></div>
-
+  <nav class="tabbar noprint" id="tabbar" role="tablist" aria-label="Sections"><button type="button" role="tab" id="tb-details" data-tab="details" aria-controls="tab-details" aria-selected="true">Your details</button><button type="button" role="tab" id="tb-needs" data-tab="needs" aria-controls="tab-needs" aria-selected="false">What you need</button><button type="button" role="tab" id="tb-data" data-tab="data" aria-controls="tab-data" aria-selected="false">Your data</button><button type="button" role="tab" id="tb-short" data-tab="short" aria-controls="tab-short" aria-selected="false">Shortlist</button><button type="button" role="tab" id="tb-test" data-tab="test" aria-controls="tab-test" aria-selected="false">Test some numbers</button></nav>
+  <div class="tabpane on" id="tab-details" role="tabpanel" aria-labelledby="tb-details" data-tab="details">
+    <div class="resbar" id="resbar"><span><b>Your results are ready.</b> See what your house needs, or keep adjusting the details here.</span><button class="btn" type="button" data-go="needs">See what your house needs &rarr;</button></div>
   <section id="inputs">
     <div class="grid2">
       <div class="panel" style="display:flex;flex-direction:column;gap:12px">
@@ -329,18 +348,19 @@ h3.gh .ico{width:26px;height:26px;padding:4px;border-radius:8px;background:var(-
       <div class="field" id="exCarWrap" style="display:none"><label for="exCarIn">Does that home use include the car charger?</label><select id="exCarIn"><option value="yes">Yes, the car is in it</option><option value="no">No, the car is separate</option></select></div>
     </div>
   </section>
+  </div>
+  <div class="tabpane" id="tab-needs" role="tabpanel" aria-labelledby="tb-needs" data-tab="needs">
+    <p class="tabnote muted" id="note-needs">Add your meter file (or type in your figures) on the <b>Your details</b> tab and the results will appear here.</p>
   <section id="summary"></section>
   <section id="whatIf" style="margin-top:16px"></section>
-  <section id="testNums" style="margin-top:16px"></section>
+  </div>
+  <div class="tabpane" id="tab-data" role="tabpanel" aria-labelledby="tb-data" data-tab="data">
+    <p class="tabnote muted" id="note-data">The charts and tables built from your readings will appear here once you add your meter file.</p>
   <section id="evidence"></section>
   <section id="method"></section>
-  <section id="feedback" class="panel" style="margin-top:16px">
-    <h2 class="hi"><svg class="ico" aria-hidden="true"><use href="#i-chat"/></svg>Does something look wrong?</h2>
-    <p class="muted" style="font-size:13.5px">If a result looks wrong, or the page misread your house, please tell me. Your file is never sent. Only the short summary below is shared, and only if you choose to copy it or email it. It has no meter number, address or dates.</p>
-    <div class="field"><label for="fbText">What looks wrong or surprising? (optional)</label><textarea id="fbText" rows="3" maxlength="1500" style="width:100%;font:inherit" placeholder="e.g. I have a pool pump, not an EV"></textarea></div>
-    <div class="field" style="margin-top:10px"><label for="fbSum">This is exactly what will be included</label><textarea id="fbSum" rows="9" readonly style="width:100%;font:12.5px/1.45 ui-monospace,Menlo,Consolas,monospace"></textarea></div>
-    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:10px"><button type="button" id="fbCopy">Copy the summary</button><a id="fbMail" class="btn" href="#" style="padding:8px 14px;border:1px solid var(--line);border-radius:6px;text-decoration:none">Email it to me</a><span id="fbDone" class="muted" style="font-size:13px;align-self:center"></span></div>
-  </section>
+  </div>
+  <div class="tabpane" id="tab-short" role="tabpanel" aria-labelledby="tb-short" data-tab="short">
+    <p class="tabnote muted" id="note-short">The shortlist of products appears here once the page has sized your house.</p>
   <section id="shortlist"></section>
 
   <section id="rankSec">
@@ -359,6 +379,19 @@ h3.gh .ico{width:26px;height:26px;padding:4px;border-radius:8px;background:var(-
     </details>
   </section>
 
+  </div>
+  <div class="tabpane" id="tab-test" role="tabpanel" aria-labelledby="tb-test" data-tab="test">
+    <p class="tabnote muted" id="note-test">This section is not available for this house. It replays real meter readings from a home with no battery yet, so it needs a meter file and no existing battery.</p>
+  <section id="testNums" style="margin-top:16px"></section>
+  </div>
+
+  <section id="feedback" class="panel" style="margin-top:16px">
+    <h2 class="hi"><svg class="ico" aria-hidden="true"><use href="#i-chat"/></svg>Does something look wrong?</h2>
+    <p class="muted" style="font-size:13.5px">If a result looks wrong, or the page misread your house, please tell me. Your file is never sent. Only the short summary below is shared, and only if you choose to copy it or email it. It has no meter number, address or dates.</p>
+    <div class="field"><label for="fbText">What looks wrong or surprising? (optional)</label><textarea id="fbText" rows="3" maxlength="1500" style="width:100%;font:inherit" placeholder="e.g. I have a pool pump, not an EV"></textarea></div>
+    <div class="field" style="margin-top:10px"><label for="fbSum">This is exactly what will be included</label><textarea id="fbSum" rows="9" readonly style="width:100%;font:12.5px/1.45 ui-monospace,Menlo,Consolas,monospace"></textarea></div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:10px"><button type="button" id="fbCopy">Copy the summary</button><a id="fbMail" class="btn" href="#" style="padding:8px 14px;border:1px solid var(--line);border-radius:6px;text-decoration:none">Email it to me</a><span id="fbDone" class="muted" style="font-size:13px;align-self:center"></span></div>
+  </section>
   <section class="notes" id="foot">
     <p><b>How far to trust this.</b> It is a sizing guide, not a design or a quote. Battery power, solar input and backup limits come from manufacturer datasheets where marked, and are estimated where marked. An accredited installer must confirm the inverter and battery pairing, the backup circuits and network approval.</p>
     <p>Solar capacity uses typical Adelaide-area monthly yields, not measured output at the property. Dataset built <span id="built"></span>.</p>
@@ -1085,6 +1118,49 @@ const drop=$('drop');['dragenter','dragover'].forEach(ev=>drop.addEventListener(
 ['dragleave','drop'].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.remove('over')}));
 drop.addEventListener('drop',e=>{const f=e.dataTransfer.files[0];if(f)f.text().then(t=>load(t,f.name,false))});
 ['gwSw','gwModel','gwBk','cookSw','cookSize','cookWire','cookBk','evSize','evChg','hasBat','phase','hws','scope','hours','pct','hasSolar','solarKw','solarInv','evHas','evKm','evUnit','evWhen'].forEach(id=>$(id).addEventListener('change',run));buildCookSel();buildTar();(function(){const s=$('evModel');D.ev.forEach((e,i)=>{const o=document.createElement('option');o.value=i;o.textContent=e.g?'Average EV, not sure which':e.m+' '+e.n+' ('+e.b+' kWh)';s.appendChild(o)});s.addEventListener('change',()=>{const v=s.value;if(v!==''){const e=D.ev[+v];$('evChg').value=e.g?'unsure':e.ac>=10?'11':'7.4';evTyTouched=false}run()})})();$('dlRpt').addEventListener('click',()=>{try{window.print()}catch(e){alert('Use your browser Print command and choose Save as PDF.')}});$('tarDet').addEventListener('input',e=>{const el=e.target;if(el.dataset.f==='p'&&el.dataset.t==='u'&&TOU.find(r=>r.k===el.dataset.k&&r.of))el.dataset.own=el.value===''?'':'1';syncTar();saveTar()});$('tarDet').addEventListener('change',()=>{syncTar();saveTar()});buildCirc();$('circBox').addEventListener('change',e=>{if(e.target.matches('[data-c=ev] [data-f=ty]'))evTyTouched=true;syncCirc();run()});$('circBox').addEventListener('input',e=>{if(e.target.type==='number')run()});$('solarKw').addEventListener('input',run);$('evN').addEventListener('input',run);$('cookKh').addEventListener('input',run);$('gwKh').addEventListener('input',run);['exGoal','exInv','exCarIn'].forEach(id=>$(id).addEventListener('change',run));['exInvKw','exAvg','exHeavy','exPeak'].forEach(id=>$(id).addEventListener('input',run));$('batKwh').addEventListener('input',run);$('evKm').addEventListener('input',run);$('evPer').addEventListener('input',run);$('evWk').addEventListener('input',run);
+
+/* ---------- tab layout (display only: no sizing logic is touched) ---------- */
+(function(){
+  const ORDER=['details','needs','data','short','test'];
+  const NAME={details:'Your details',needs:'What you need',data:'Your data',short:'Shortlist',test:'Test some numbers'};
+  const FILL={needs:'summary',data:'evidence',short:'shortlist',test:'testNums'};
+  const has=id=>{const e=document.getElementById(id);return !!(e&&e.innerHTML.trim())};
+  function show(k,scroll){
+    ORDER.forEach(t=>{const on=t===k;document.getElementById('tab-'+t).classList.toggle('on',on);const b=document.getElementById('tb-'+t);b.setAttribute('aria-selected',on?'true':'false');b.tabIndex=on?0:-1});
+    if(scroll){const bar=document.getElementById('tabbar');window.scrollTo({top:Math.max(0,bar.getBoundingClientRect().top+window.scrollY-6),behavior:'auto'})}
+    try{history.replaceState(null,'','#'+k)}catch(e){}
+  }
+  function refresh(){
+    const ready=has('summary');
+    ORDER.slice(1).forEach(k=>{
+      const f=has(FILL[k]),b=document.getElementById('tb-'+k),n=document.getElementById('note-'+k);
+      // the test section is blank by design for some houses, so only call it "off" once results exist
+      const live=k==='test'?(ready&&f):f;
+      b.classList.toggle('off',!live);
+      n.style.display=f?'none':'';
+      const pane=document.getElementById('tab-'+k);
+      pane.querySelectorAll(':scope>section').forEach(sec=>{sec.style.display=f?'':'none'});
+    });
+    const rb=document.getElementById('resbar');rb.classList.toggle('on',ready);
+    const b1=document.getElementById('tb-needs'),dot=b1.querySelector('.dot');
+    if(ready&&!dot)b1.insertAdjacentHTML('beforeend','<span class="dot" title="Results ready"></span>');else if(!ready&&dot)dot.remove();
+  }
+  // previous / next buttons at the bottom of each tab
+  ORDER.forEach((k,i)=>{const pane=document.getElementById('tab-'+k);
+    const prev=i>0?'<button class="btn ghost" type="button" data-go="'+ORDER[i-1]+'">&larr; '+NAME[ORDER[i-1]]+'</button>':'<span></span>';
+    const next=i<ORDER.length-1?'<button class="btn ghost" type="button" data-go="'+ORDER[i+1]+'">'+NAME[ORDER[i+1]]+' &rarr;</button>':'<span></span>';
+    pane.insertAdjacentHTML('beforeend','<div class="pnav noprint">'+prev+next+'</div>')});
+  document.addEventListener('click',e=>{const t=e.target.closest('[data-tab],[data-go]');if(!t||t.classList.contains('tabpane'))return;
+    const k=t.dataset.tab||t.dataset.go;if(ORDER.includes(k))show(k,true)});
+  document.getElementById('tabbar').addEventListener('keydown',e=>{
+    if(e.key!=='ArrowRight'&&e.key!=='ArrowLeft')return;const cur=ORDER.findIndex(k=>document.getElementById('tb-'+k).getAttribute('aria-selected')==='true');
+    const nx=ORDER[(cur+(e.key==='ArrowRight'?1:ORDER.length-1))%ORDER.length];show(nx,false);document.getElementById('tb-'+nx).focus()});
+  let q=0;const mo=new MutationObserver(()=>{if(q)return;q=requestAnimationFrame(()=>{q=0;refresh()})});
+  Object.values(FILL).forEach(id=>mo.observe(document.getElementById(id),{childList:true,subtree:true}));
+  refresh();
+  const h=(location.hash||'').slice(1);if(ORDER.includes(h)&&h!=='details')show(h,false);
+})();
+
 window.__BS={parseNEM12,buildSeries,sizing,recommend,load,get S(){return S},get SZ(){return SZ}};
 load(sample(),'example',true);
 })();
