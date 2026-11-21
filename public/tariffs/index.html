@@ -1,0 +1,933 @@
+<!DOCTYPE html>
+<html lang="en-AU">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>Electricity Rates Comparison (local)</title>
+<style>
+:root{
+  --bg:#f6f7f9; --card:#fff; --ink:#1f2933; --muted:#667085; --line:#e4e7ec;
+  --accent:#2563eb; --warn-bg:#fff7e6; --warn-line:#f5c26b; --bad:#b42318; --good:#067647;
+  --p0:#2563eb; --p1:#16a34a; --p2:#d97706;
+}
+*{box-sizing:border-box}
+body{margin:0;font:14px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;background:var(--bg);color:var(--ink)}
+header{background:#0f172a;color:#fff;padding:18px 24px}
+header h1{margin:0;font-size:20px;font-weight:650}
+header p{margin:4px 0 0;color:#cbd5e1;font-size:13px}
+header p.needfile{margin-top:10px;padding:8px 12px;background:#1e293b;border-left:4px solid #f59e0b;border-radius:6px;color:#e2e8f0;max-width:1000px}
+header a{color:#93c5fd}
+main{max-width:1240px;margin:0 auto;padding:16px 20px 60px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:16px 18px;margin:14px 0}
+.card h2{margin:0 0 10px;font-size:16px}
+.card h3{margin:14px 0 6px;font-size:14px}
+.disclaimer{background:var(--warn-bg);border:1px solid var(--warn-line);border-radius:10px;padding:10px 14px;font-size:13px}
+.disclaimer b{color:#7a4b00}
+.row{display:flex;flex-wrap:wrap;gap:10px 18px;align-items:center}
+label.f{display:flex;flex-direction:column;font-size:12px;color:var(--muted);gap:3px}
+label.f input,label.f select{font-size:14px}
+input[type=number]{width:110px}
+input[type=text]{width:240px}
+input,select,button{font:inherit;padding:5px 8px;border:1px solid #cfd4dc;border-radius:6px;background:#fff;color:var(--ink)}
+button{cursor:pointer;background:#f2f4f7}
+button:hover{background:#e7eaf0}
+button.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+button.small{padding:2px 7px;font-size:12px}
+button.danger{color:var(--bad)}
+.muted{color:var(--muted)}
+.small{font-size:12px}
+table{border-collapse:collapse;width:100%}
+th,td{padding:5px 8px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
+th{font-size:12px;color:var(--muted);font-weight:600}
+td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
+.tabs{display:flex;gap:4px;border-bottom:1px solid var(--line);margin-bottom:12px}
+.tab{padding:8px 14px;border:1px solid var(--line);border-bottom:none;border-radius:8px 8px 0 0;background:#f2f4f7;cursor:pointer;font-weight:600;display:flex;gap:6px;align-items:center}
+.tab.active{background:#fff;position:relative;top:1px}
+.tab .dot{width:10px;height:10px;border-radius:50%}
+.tab.off{opacity:.55}
+.q{margin:10px 0 4px;font-weight:600}
+.radio{display:inline-flex;gap:4px;align-items:center;margin-right:14px;font-weight:400}
+.sched{border:1px solid var(--line);border-radius:8px;padding:10px 12px;margin:6px 0 12px;background:#fcfcfd}
+.bands td{border:none;padding:3px 6px}
+.swatch{width:22px;height:22px;border-radius:5px;border:2px solid transparent;cursor:pointer;display:inline-block}
+.brush .swatch{border-color:#111;box-shadow:0 0 0 2px #fff inset}
+.gridwrap{overflow-x:auto;margin-top:8px}
+.grid{display:grid;grid-template-columns:70px repeat(48,minmax(14px,1fr));gap:1px;min-width:820px;user-select:none}
+.grid .lbl{font-size:11px;color:var(--muted);align-self:center}
+.grid .hr{font-size:10px;color:var(--muted);grid-column:span 2;text-align:left}
+.cell{height:26px;cursor:crosshair;border-radius:2px}
+.cell:hover{outline:2px solid #111}
+.legend{display:flex;gap:12px;flex-wrap:wrap;font-size:12px;margin-top:6px}
+.legend span i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:4px;vertical-align:-1px}
+.summary{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px}
+.tot{border:1px solid var(--line);border-radius:10px;padding:12px 14px;border-top:5px solid var(--p0)}
+.tot .big{font-size:26px;font-weight:700;font-variant-numeric:tabular-nums}
+.tot .delta.good{color:var(--good)} .tot .delta.bad{color:var(--bad)}
+.warnlist{margin:6px 0 0;padding-left:18px;color:#7a4b00;font-size:13px}
+.drop{border:2px dashed #b8c0cc;border-radius:10px;padding:18px;text-align:center;background:#fafbfc}
+.drop.hover{border-color:var(--accent);background:#eef4ff}
+.chart svg{width:100%;height:auto}
+.hidden{display:none!important}
+.modal{position:fixed;inset:0;background:rgba(15,23,42,.45);display:flex;align-items:center;justify-content:center;z-index:50}
+.mbox{background:#fff;border-radius:10px;padding:16px 18px;max-width:440px;box-shadow:0 10px 30px rgba(0,0,0,.25)}
+.mbox p{margin:0 0 12px}
+.pill{display:inline-block;padding:1px 8px;border-radius:999px;background:#eef2f6;font-size:12px}
+footer{max-width:1240px;margin:0 auto;padding:0 20px 40px;color:var(--muted);font-size:12px}
+</style>
+</head>
+<body>
+<header>
+  <h1>Electricity Rates Comparison <span class="pill" style="background:#334155;color:#e2e8f0">test build</span></h1>
+  <p><a href="/">&larr; Battery and Solar Sizing Assistant</a></p>
+  <p>Run your NEM12 smart-meter file against your current tariff and up to two proposed tariffs. Everything runs in this browser; nothing is uploaded.</p>
+  <p class="needfile">To use this tool you must upload a <b>NEM12 file</b>. It does not use the kWh totals from invoices, because they don't show <i>when</i> you actually used the power, and time-of-use rates depend on that. South Australians can download their NEM12 file from SA Power Networks at <a href="https://www.sapowernetworks.com.au/your-power/your-electricity-meter/" target="_blank" rel="noopener">sapowernetworks.com.au/your-power/your-electricity-meter</a>. The data-download entry point is about halfway down that page. (So far this tool has only been tested on South Australian data.)</p>
+</header>
+<main>
+
+<div class="disclaimer">
+  <b>Read this first.</b> This is an estimate for education only, not financial advice and not a quote. It replays <i>past</i> usage against rates <i>you</i> type in. It assumes you would use power exactly the same way on every plan, which usually isn't true. It does not model demand charges, seasonal rates, conditional or pay-on-time discounts, concessions, plan rate changes part-way through the year, or metering and other fees unless you enter them. Retailer offers change often, so check the retailer's Basic Plan Information Document (BPID) or Energy Made Easy before you switch. Rates are assumed to <b>include GST</b>.
+</div>
+
+<!-- 1. Data -->
+<section class="card" id="dataCard">
+  <h2>1. Load your NEM12 file</h2>
+  <div class="drop" id="drop">
+    <div>Drag a NEM12 file (.csv) here, or <input type="file" id="file" accept=".csv,.txt,.nem12,text/csv"></div>
+    <div class="small muted" style="margin-top:6px">Your retailer or SA Power Networks can provide this, usually as a "detailed interval data" download.</div>
+  </div>
+  <div id="handoffBar" class="hidden" style="margin-top:10px;padding:8px 12px;border-radius:8px;background:#eef4ff;border:1px solid #c7d7fe;font-size:13px"></div>
+  <div id="dataInfo" class="hidden">
+    <div class="row" style="margin-top:12px">
+      <label class="f">NMI <select id="nmiSel"></select></label>
+      <label class="f">From <input type="date" id="fromDate"></label>
+      <label class="f">To <input type="date" id="toDate"></label>
+      <button class="small" id="last12">Use last 12 months</button>
+      <label class="f">Meter time handling
+        <select id="tzMode">
+          <option value="local">Convert to SA local time (ACST/ACDT), the default</option>
+          <option value="nem">Leave as NEM time (AEST, no daylight saving)</option>
+        </select>
+      </label>
+    </div>
+    <h3>Meter channels found</h3>
+    <table id="chanTable"><thead><tr><th>Channel</th><th>Unit</th><th>Interval</th><th class="num">Days</th><th class="num">kWh in range</th><th>Treat as</th></tr></thead><tbody></tbody></table>
+    <div class="small muted" style="margin-top:6px">Usual meanings: <b>E1</b> = general usage from the grid, <b>E2</b> (another E channel) = controlled load (e.g. off-peak hot water), <b>B1</b> = solar export to the grid. Change any channel that's been guessed wrong.</div>
+    <ul class="warnlist" id="dataWarn"></ul>
+  </div>
+</section>
+
+<!-- 2. Plans -->
+<section class="card">
+  <h2>2. Enter the tariffs</h2>
+  <div class="row small muted" style="margin-bottom:8px">All energy rates are in <b>cents per kWh</b> and supply charges in <b>cents per day</b>, including GST. You can copy these straight from a BPID.</div>
+  <div class="tabs" id="tabs"></div>
+  <div id="planEditor"></div>
+  <div class="row" style="margin-top:10px">
+    <button id="saveJson">Save all plans to a file</button>
+    <button id="copyJson">Copy plans as text</button>
+    <label class="f" style="flex-direction:row;align-items:center;gap:6px">Load plans from a file <input type="file" id="loadJson" accept=".json,application/json"></label>
+    <button id="resetPlans" class="danger">Start again (blank plans)</button>
+  </div>
+</section>
+
+<!-- 3. Results -->
+<section class="card" id="resultsCard">
+  <h2>3. Comparison</h2>
+  <div id="noData" class="muted">Load a NEM12 file to see the comparison.</div>
+  <div id="results" class="hidden">
+    <div id="usageSummary" class="small muted" style="margin-bottom:10px"></div>
+    <div class="summary" id="totals"></div>
+    <ul class="warnlist" id="planWarn"></ul>
+    <h3>Cost by month (for the selected period)</h3>
+    <div class="chart" id="chart"></div>
+    <h3>Breakdown</h3>
+    <div style="overflow-x:auto"><table id="breakdown"></table></div>
+  </div>
+</section>
+
+</main>
+<footer>
+  The starting periods follow SA Power Networks' Residential Time of Use windows (local time): Off Peak midnight–6am, Morning Peak 6am–10am, Solar Sponge 10am–4pm, Evening Peak 4pm–midnight. SAPN calls both peaks "Peak"; they are split here so you can price them separately if a retailer does. Your retailer's windows may differ. Always check the BPID. This page keeps your plans in this browser only (local storage) and in any JSON file you save.
+</footer>
+
+<!-- ================= ENGINE (pure functions, no DOM) ================= -->
+<script id="engine">
+"use strict";
+const SLOTS = 48;
+
+function uomFactor(u){
+  u = (u||'').toUpperCase();
+  if (u === 'WH') return 0.001;
+  if (u === 'MWH') return 1000;
+  return 1; // KWH, and anything else is shown as-is
+}
+
+/** Parse NEM12 text into {header, nmis:{NMI:{channels:{key:ch}}}, warnings} */
+function parseNEM12(text){
+  const out = { header:null, nmis:{}, warnings:[] };
+  const lines = text.split(/\r?\n/);
+  let cur = null, n300 = 0;
+  for (const raw of lines){
+    const line = raw.trim();
+    if (!line) continue;
+    const f = line.split(',');
+    const rt = f[0];
+    if (rt === '100'){
+      out.header = { version:f[1], created:f[2], from:f[3], to:f[4] };
+      if ((f[1]||'').toUpperCase() !== 'NEM12') out.warnings.push('Header says "'+f[1]+'", not NEM12. Trying anyway.');
+    } else if (rt === '200'){
+      const nmi = f[1];
+      const suffix = (f[4]||'?').toUpperCase();
+      const serial = f[6]||'';
+      const uom = (f[7]||'KWH').toUpperCase();
+      const len = parseInt(f[8],10) || 30;
+      if (!out.nmis[nmi]) out.nmis[nmi] = { channels:{} };
+      const chans = out.nmis[nmi].channels;
+      let key = suffix;
+      if (chans[key] && chans[key].serial !== serial) key = suffix + ' (' + serial + ')';
+      if (!chans[key]) chans[key] = { key, suffix, register:f[3]||'', serial, uom, len, days:new Map(), quality:{} };
+      cur = chans[key];
+      if (1440 % cur.len !== 0){ out.warnings.push('Channel '+key+' has an unusual interval length ('+cur.len+' min).'); }
+    } else if (rt === '300' && cur){
+      const date = f[1];
+      if (!/^\d{8}$/.test(date)) continue;
+      const n = 1440 / cur.len;
+      const mult = uomFactor(cur.uom);
+      const vals = new Float64Array(n);
+      for (let i=0;i<n;i++){
+        const v = parseFloat(f[2+i]);
+        vals[i] = isFinite(v) ? v*mult : 0;
+      }
+      cur.days.set(date, vals);            // later rows for the same date replace earlier ones
+      cur.quality[date] = (f[2+n]||'').charAt(0);
+      n300++;
+    }
+  }
+  if (!Object.keys(out.nmis).length) out.warnings.push('No 200 (channel) records found. Is this a NEM12 file?');
+  if (!n300) out.warnings.push('No 300 (interval data) records found.');
+  return out;
+}
+
+function defaultRole(key, allKeys){
+  const s = key.charAt(0);
+  if (s === 'B') return 'exp';
+  if (s === 'E'){
+    const es = allKeys.filter(k => k.charAt(0)==='E').sort();
+    return es[0] === key ? 'imp' : 'cl';
+  }
+  return 'ignore'; // Q/K reactive etc.
+}
+
+function firstSunday(y, m){ const dow = new Date(Date.UTC(y,m,1)).getUTCDay(); return 1 + ((7-dow)%7); }
+/** SA daylight saving: first Sunday Oct 2:00 ACST to first Sunday Apr 3:00 ACDT */
+function isSADST(utc){
+  const y = new Date(utc).getUTCFullYear();
+  const start = Date.UTC(y,9,firstSunday(y,9),2,0) - 9.5*3600e3;
+  const end   = Date.UTC(y,3,firstSunday(y,3),3,0) - 10.5*3600e3;
+  return utc >= start || utc < end;
+}
+function ymd(d){ return d.slice(0,4)+'-'+d.slice(4,6)+'-'+d.slice(6,8); }
+
+/**
+ * Turn chosen channels into local-time days of 48 half-hour slots.
+ * opts: {roles:{key:'imp'|'exp'|'cl'|'ignore'}, localTime:bool, from:'YYYYMMDD'|null, to:'YYYYMMDD'|null}
+ */
+function buildDays(nmiData, opts){
+  const days = new Map();
+  const nemDates = new Set();
+  const nonActual = new Set();
+  const totals = { imp:0, exp:0, cl:0 };
+  for (const ch of Object.values(nmiData.channels)){
+    const role = opts.roles[ch.key];
+    if (!role || role === 'ignore') continue;
+    for (const [date, vals] of ch.days){
+      if (opts.from && date < opts.from) continue;
+      if (opts.to && date > opts.to) continue;
+      nemDates.add(date);
+      if (ch.quality[date] && ch.quality[date] !== 'A') nonActual.add(date);
+      const base = Date.UTC(+date.slice(0,4), +date.slice(4,6)-1, +date.slice(6,8)) - 10*3600e3; // NEM time = UTC+10
+      for (let i=0;i<vals.length;i++){
+        const v = vals[i];
+        if (!v) continue;
+        const utc = base + i*ch.len*60000;
+        const off = opts.localTime ? (isSADST(utc) ? 10.5 : 9.5) : 10;
+        const lt = new Date(utc + off*3600e3);
+        const k = lt.getUTCFullYear()*10000 + (lt.getUTCMonth()+1)*100 + lt.getUTCDate();
+        let rec = days.get(k);
+        if (!rec){ rec = { key:k, dow:lt.getUTCDay(), imp:new Float64Array(SLOTS), exp:new Float64Array(SLOTS), cl:new Float64Array(SLOTS) }; days.set(k, rec); }
+        const slot = Math.floor((lt.getUTCHours()*60 + lt.getUTCMinutes())/30);
+        rec[role][slot] += v;
+        totals[role] += v;
+      }
+    }
+  }
+  const supplyDaysByMonth = {};
+  for (const d of nemDates){ const m = +d.slice(0,6); supplyDaysByMonth[m] = (supplyDaysByMonth[m]||0)+1; }
+  const sorted = [...nemDates].sort();
+  return {
+    days:[...days.values()].sort((a,b)=>a.key-b.key),
+    supplyDays:nemDates.size, supplyDaysByMonth, totals,
+    nonActualDays:nonActual.size,
+    first:sorted[0]||null, last:sorted[sorted.length-1]||null
+  };
+}
+
+/** Build a lookup (dow, slot) -> band for a flat rate or a TOU schedule */
+function makeLookup(type, flatRate, sched, flatName){
+  if (type !== 'tou' || !sched || !sched.bands || !sched.bands.length){
+    const b = { id:'__flat', name:flatName||'All times', rate:+flatRate||0 };
+    return { bands:[b], get:()=>b };
+  }
+  const map = {}; sched.bands.forEach(b => map[b.id] = { id:b.id, name:b.name, rate:+b.rate||0 });
+  const first = map[sched.bands[0].id];
+  const wd = sched.weekday.map(id => map[id] || first);
+  const we = (sched.splitWeekend ? sched.weekend : sched.weekday).map(id => map[id] || first);
+  return { bands:sched.bands.map(b=>map[b.id]), get:(dow,slot)=> (dow===0||dow===6) ? we[slot] : wd[slot] };
+}
+
+/** Cost one plan over the prepared data. Money is in dollars; credits are positive numbers. */
+function computePlan(planIn, data){
+  const plan = normalisePlan(planIn);
+  const imp = makeLookup(plan.importType, plan.importFlat, plan.importSched, 'All times');
+  const exp = makeLookup(plan.exportType, plan.exportFlat, plan.exportSched, 'All times');
+  const clL = makeLookup(plan.clType, plan.clFlat, plan.clSched, 'All times');
+  const acc = () => ({ kwh:0, cost:0 });
+  const impBand = {}, expBand = {}, clBand = {};
+  imp.bands.forEach(b => impBand[b.id] = Object.assign(acc(), {name:b.name, rate:b.rate}));
+  exp.bands.forEach(b => expBand[b.id] = Object.assign(acc(), {name:b.name, rate:b.rate}));
+  clL.bands.forEach(b => clBand[b.id] = Object.assign(acc(), {name:b.name, rate:b.rate}));
+  const impTiers = (plan.importTiers||[]).map(t => ({ label:t.label||'Import tier', limit:+t.kwh||0, rate:+t.rate||0, band:t.band||'any', kwh:0, cost:0 }));
+  const expTiers = (plan.exportTiers||[]).map(t => ({ label:t.label||'Export tier', limit:+t.kwh||0, rate:+t.rate||0, band:t.band||'any', kwh:0, cost:0 }));
+  const ec = plan.exportCharge || {};
+  const ecOn = !!ec.enabled;
+  const ecFrom = (+ec.fromHour||0)*2, ecTo = (+ec.toHour||0)*2, ecFree = +ec.freeKwh||0, ecRate = +ec.rate||0;
+  const exportCharge = { kwh:0, cost:0, rate:ecRate };
+  const monthly = {};
+  const mget = m => monthly[m] || (monthly[m] = { usage:0, credit:0, supply:0, fees:0, discount:0, exportCharge:0 });
+
+  for (const rec of data.days){
+    const mo = mget(Math.floor(rec.key/100));
+    const remI = impTiers.map(t => t.limit);
+    const remE = expTiers.map(t => t.limit);
+    let windowExport = 0;
+    for (let s=0;s<SLOTS;s++){
+      let q = rec.imp[s];
+      if (q > 0){
+        const b = imp.get(rec.dow, s);
+        for (let i=0;i<impTiers.length && q>0;i++){
+          const t = impTiers[i];
+          if (remI[i] > 0 && (t.band==='any' || t.band===b.id)){
+            const take = Math.min(q, remI[i]); remI[i]-=take; q-=take;
+            t.kwh += take; const c = take*t.rate/100; t.cost += c; mo.usage += c;
+          }
+        }
+        if (q > 0){ const a = impBand[b.id]; a.kwh += q; const c = q*b.rate/100; a.cost += c; mo.usage += c; }
+      }
+      q = rec.exp[s];
+      if (q > 0){
+        if (ecOn && s >= ecFrom && s < ecTo) windowExport += q;
+        const b = exp.get(rec.dow, s);
+        for (let i=0;i<expTiers.length && q>0;i++){
+          const t = expTiers[i];
+          if (remE[i] > 0 && (t.band==='any' || t.band===b.id)){
+            const take = Math.min(q, remE[i]); remE[i]-=take; q-=take;
+            t.kwh += take; const c = take*t.rate/100; t.cost += c; mo.credit += c;
+          }
+        }
+        if (q > 0){ const a = expBand[b.id]; a.kwh += q; const c = q*b.rate/100; a.cost += c; mo.credit += c; }
+      }
+      q = rec.cl[s];
+      if (q > 0){
+        const b = clL.get(rec.dow, s);
+        const a = clBand[b.id]; a.kwh += q; const c = q*b.rate/100; a.cost += c; mo.usage += c;
+      }
+    }
+    if (ecOn && windowExport > ecFree){
+      const over = windowExport - ecFree; const c = over*ecRate/100;
+      exportCharge.kwh += over; exportCharge.cost += c; mo.exportCharge += c;
+    }
+  }
+
+  const hasCL = data.totals.cl > 0;
+  const supplyRate = (+plan.supply||0)/100 + (hasCL ? (+plan.clSupply||0)/100 : 0);
+  const feePerDay = (+plan.feesAnnual||0)/365;
+  const discPct = (+plan.discountPct||0)/100;
+  let supply=0, fees=0, discount=0, usage=0, credit=0, ecTotal=0;
+  for (const [m, days] of Object.entries(data.supplyDaysByMonth)){
+    const mo = mget(+m); mo.supply += days*supplyRate; mo.fees += days*feePerDay;
+  }
+  for (const mo of Object.values(monthly)){
+    mo.discount = discPct * (mo.usage + (plan.discountOnSupply ? mo.supply : 0));
+    mo.total = mo.supply + mo.usage + mo.fees + mo.exportCharge - mo.credit - mo.discount;
+    supply += mo.supply; fees += mo.fees; discount += mo.discount; usage += mo.usage; credit += mo.credit; ecTotal += mo.exportCharge;
+  }
+  const total = supply + usage + fees + ecTotal - credit - discount;
+  const importKwh = data.totals.imp + data.totals.cl;
+  return {
+    impBand, expBand, clBand, impTiers, expTiers, exportCharge, monthly,
+    supply, fees, discount, usage, credit, total,
+    annual: data.supplyDays ? total*365/data.supplyDays : 0,
+    effectiveImport: importKwh ? usage/importKwh*100 : 0,
+    days:data.supplyDays
+  };
+}
+
+/* ---------- Presets ---------- */
+const BAND_COLOURS = ['#1e3a8a','#ef4444','#f59e0b','#10b981','#8b5cf6','#ec4899','#0ea5e9','#84cc16','#64748b','#f97316','#14b8a6','#a16207'];
+let _uid = 0;
+function uid(){ return 'b' + Date.now().toString(36) + (_uid++).toString(36); }
+/** spec: [[name, rate, colour, [[fromSlot,toSlotExclusive],...]], ...] */
+function schedFrom(spec){
+  const bands = spec.map(([name,rate,colour]) => ({ id:uid(), name, rate, colour }));
+  const wd = new Array(SLOTS).fill(bands[0].id);
+  spec.forEach(([, , , ranges], i) => ranges.forEach(([a,b]) => { for (let s=a;s<b;s++) wd[s] = bands[i].id; }));
+  return { bands, weekday:wd, weekend:wd.slice(), splitWeekend:false };
+}
+const h = x => x*2; // hour -> slot
+/** SA Power Networks Residential Time of Use windows (local time), with Peak split into morning and evening */
+const SAPN_SPEC = () => [
+  ['Off Peak', 0, '#1e3a8a', [[h(0),h(6)]]],
+  ['Morning Peak', 0, '#ef4444', [[h(6),h(10)]]],
+  ['Solar Sponge', 0, '#10b981', [[h(10),h(16)]]],
+  ['Evening Peak', 0, '#f97316', [[h(16),h(24)]]]
+];
+const SAPN_LABEL = 'SAPN standard periods (Off Peak, Morning Peak, Solar Sponge, Evening Peak)';
+const PRESETS = {
+  import:{
+    sapn: { label:SAPN_LABEL, make:() => schedFrom(SAPN_SPEC()) },
+    freemid: { label:'Free midday hours style', make:() => schedFrom([
+      ['Off Peak', 0, '#1e3a8a', [[h(0),h(6)]]],
+      ['Morning Peak', 0, '#ef4444', [[h(6),h(10)]]],
+      ['Shoulder', 0, '#f59e0b', [[h(10),h(12)],[h(15),h(16)]]],
+      ['Free window', 0, '#10b981', [[h(12),h(15)]]],
+      ['Evening Peak', 0, '#f97316', [[h(16),h(24)]]]
+    ])},
+    electrify: { label:'SAPN Electrify-style periods', make:() => schedFrom([
+      ['Shoulder', 0, '#f59e0b', [[h(0),h(10)],[h(16),h(17)],[h(21),h(24)]]],
+      ['Solar Sponge', 0, '#10b981', [[h(10),h(16)]]],
+      ['Peak', 0, '#ef4444', [[h(17),h(21)]]]
+    ])}
+  },
+  export:{
+    sapn: { label:SAPN_LABEL, make:() => schedFrom(SAPN_SPEC()) },
+    evening: { label:'Evening export bonus style', make:() => schedFrom([
+      ['Normal export', 0, '#64748b', [[h(0),h(24)]]],
+      ['Evening export', 0, '#ef4444', [[h(16),h(21)]]]
+    ])}
+  },
+  cl:{
+    sapn: { label:SAPN_LABEL, make:() => schedFrom(SAPN_SPEC()) }
+  }
+};
+PRESETS.import.sapn.isDefault = PRESETS.export.sapn.isDefault = PRESETS.cl.sapn.isDefault = true;
+
+function blankPlan(name){
+  return {
+    name, supply:0,
+    importType:'tou', importFlat:0, importSched:PRESETS.import.sapn.make(),
+    exportType:'flat', exportFlat:0, exportSched:PRESETS.export.sapn.make(),
+    clType:'flat', clFlat:0, clSched:PRESETS.cl.sapn.make(), clSupply:0,
+    importTiers:[], exportTiers:[],
+    exportCharge:{ enabled:false, rate:1, freeKwh:9, fromHour:10, toHour:16 },
+    feesAnnual:0, discountPct:0, discountOnSupply:false, notes:''
+  };
+}
+function startingPlans(){ return [ blankPlan('Current plan'), blankPlan('Proposed plan 1') ]; }
+
+/** Bring plans saved by older versions up to date (adds missing fields; never removes user data). */
+function normalisePlan(p){
+  if (p && p.__v2) return p;
+  const b = blankPlan(p && p.name || 'Plan');
+  const out = Object.assign(b, JSON.parse(JSON.stringify(p||{})));
+  if (p && p.cl){
+    out.clFlat = +p.cl.rate || 0;
+    out.clSupply = +p.cl.supply || 0;
+    if (p.cl.useImportRates){ out.clType = 'tou'; out.clSched = JSON.parse(JSON.stringify(out.importSched)); }
+    else out.clType = 'flat';
+    delete out.cl;
+  }
+  out.exportCharge = b.exportCharge; // retired from the page: SAPN's export charge is billed to retailers, who reflect it (or not) in their own feed-in rates
+  delete out.enabled;
+  Object.defineProperty(out, '__v2', { value:true, enumerable:false });
+  return out;
+}
+/** Accept a saved file in any version; returns 1-3 plans. */
+function plansFromSaved(j){
+  let p = j && (j.plans || j);
+  if (!Array.isArray(p) || !p.length) return null;
+  p = p.filter((x,i) => i===0 || x.enabled !== false).slice(0,3).map(normalisePlan);
+  if (p.length < 2) p.push(blankPlan('Proposed plan 1'));
+  return p;
+}
+
+if (typeof module !== 'undefined') module.exports = { parseNEM12, defaultRole, buildDays, computePlan, isSADST, PRESETS, startingPlans, blankPlan, schedFrom, normalisePlan, plansFromSaved };
+</script>
+
+<!-- ================= UI ================= -->
+<script id="ui">
+"use strict";
+const PLAN_COLOURS = ['var(--p0)','var(--p1)','var(--p2)'];
+const PLAN_HEX = ['#2563eb','#16a34a','#d97706'];
+const STORE_KEY = 'erc_plans_v2';
+const $ = s => document.querySelector(s);
+const esc = s => String(s==null?'':s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const money = v => (v<0?'-':'') + '$' + Math.abs(v).toLocaleString('en-AU',{minimumFractionDigits:2, maximumFractionDigits:2});
+const kwh = v => v.toLocaleString('en-AU',{maximumFractionDigits:1}) + ' kWh';
+const KIND = {
+  import:{ type:'importType', flat:'importFlat', sched:'importSched', tiers:'importTiers', flatLabel:'Usage rate' },
+  export:{ type:'exportType', flat:'exportFlat', sched:'exportSched', tiers:'exportTiers', flatLabel:'Feed-in rate' },
+  cl:    { type:'clType',     flat:'clFlat',     sched:'clSched',     tiers:null,          flatLabel:'Controlled load rate' }
+};
+
+let plans = loadPlans();
+let activeTab = 0;
+let brush = { import:null, export:null, cl:null };
+let parsed = null, roles = {}, curNmi = null;
+let painting = false;
+window.addEventListener('mouseup', () => { if (painting){ painting = false; changed(); } });
+
+function loadPlans(){
+  try { const s = localStorage.getItem(STORE_KEY); if (s){ const p = plansFromSaved(JSON.parse(s)); if (p) return p; } } catch(e){}
+  return startingPlans().map(normalisePlan);
+}
+function savePlans(){ try { localStorage.setItem(STORE_KEY, JSON.stringify(plans)); } catch(e){} }
+let recalcTimer = null;
+function changed(){ savePlans(); clearTimeout(recalcTimer); recalcTimer = setTimeout(recalc, 150); }
+
+/* ---------- Tabs & editor ---------- */
+function renderTabs(){
+  let html = plans.map((p,i) =>
+    `<div class="tab ${i===activeTab?'active':''}" data-i="${i}"><span class="dot" style="background:${PLAN_COLOURS[i]}"></span>${esc(p.name||('Plan '+(i+1)))}</div>`).join('');
+  if (plans.length < 3) html += `<div class="tab" id="addPlan" style="font-weight:400;background:#fff;border-style:dashed">+ Add another plan to compare</div>`;
+  $('#tabs').innerHTML = html;
+  $('#tabs').querySelectorAll('.tab[data-i]').forEach(t => t.onclick = () => { activeTab = +t.dataset.i; renderTabs(); renderEditor(); });
+  const add = $('#addPlan');
+  if (add) add.onclick = () => { plans.push(normalisePlan(blankPlan('Proposed plan ' + plans.length))); activeTab = plans.length-1; renderTabs(); renderEditor(); changed(); };
+}
+
+function numInput(obj, key, opts={}){
+  const id = 'n'+Math.random().toString(36).slice(2);
+  setTimeout(() => { const el = document.getElementById(id); if (el) el.oninput = () => { obj[key] = el.value === '' ? 0 : parseFloat(el.value); changed(); }; });
+  return `<input type="number" id="${id}" step="${opts.step||'any'}" value="${esc(obj[key])}" ${opts.w?`style="width:${opts.w}px"`:''}>`;
+}
+function textInput(obj, key, onchange, w){
+  const id = 't'+Math.random().toString(36).slice(2);
+  setTimeout(() => { const el = document.getElementById(id); if (el) el.oninput = () => { obj[key] = el.value; changed(); if (onchange) onchange(); }; });
+  return `<input type="text" id="${id}" value="${esc(obj[key])}" ${w?`style="width:${w}px"`:''}>`;
+}
+/** In-page confirm/notice (browser dialogs are blocked when hosted as an artifact). */
+function ask(msg, noticeOnly){
+  return new Promise(res => {
+    const d = document.createElement('div'); d.className = 'modal';
+    d.innerHTML = `<div class="mbox" role="dialog" aria-modal="true"><p>${esc(msg)}</p><div class="row" style="justify-content:flex-end">${noticeOnly?'':'<button class="mno">Cancel</button>'}<button class="primary myes">OK</button></div></div>`;
+    document.body.appendChild(d);
+    const done = v => { d.remove(); res(v); };
+    const no = d.querySelector('.mno'); if (no) no.onclick = () => done(false);
+    d.querySelector('.myes').onclick = () => done(true);
+    d.querySelector('.myes').focus();
+  });
+}
+const typeRadios = (kind, p, noLabel, yesLabel) => {
+  const k = KIND[kind].type;
+  return `<label class="radio"><input type="radio" name="ty_${kind}" value="flat" ${p[k]==='flat'?'checked':''}> ${noLabel}</label>
+          <label class="radio"><input type="radio" name="ty_${kind}" value="tou" ${p[k]==='tou'?'checked':''}> ${yesLabel}</label>`;
+};
+
+function renderEditor(){
+  const p = plans[activeTab], i = activeTab;
+  const ed = $('#planEditor');
+  ed.innerHTML = `
+    <div class="row">
+      <label class="f">Plan name ${textInput(p,'name',renderTabs,300)}</label>
+      ${i>0 ? `<button class="small" id="copyCur">Copy everything from Current</button>
+               ${plans.length>2 ? '<button class="small danger" id="delPlan">Remove this plan</button>' : ''}`
+            : '<span class="pill">This is the baseline the others are compared against</span>'}
+      <label class="f">Daily supply charge (c/day) ${numInput(p,'supply')}</label>
+    </div>
+
+    <div class="q">Is this a time-of-use tariff for usage (import)?</div>
+    ${typeRadios('import', p, 'No, a single rate', 'Yes, rates change by time of day')}
+    <div id="box_import"></div>
+
+    <div class="q">Solar feed-in (export) rate</div>
+    <div class="small muted" style="margin-bottom:4px">Enter the <b>total</b> amount you receive per kWh exported, including any government feed-in tariff. If your bill shows the retailer's feed-in and a government or legacy scheme amount separately, add them together. If you also receive a government-backed feed-in tariff (common with older solar systems), entering only the retailer's part will make every plan look worse than it really is.</div>
+    ${typeRadios('export', p, 'Single rate', 'Changes by time of day')}
+    <div id="box_export"></div>
+
+    <div class="q">Daily allowances and bonuses <span class="small muted">(applied first, before the normal rates)</span></div>
+    <div class="small muted">Use these for "first N kWh per day at a special rate", e.g. free power for the first 24 kWh between 12 and 3pm, or 10c feed-in for the first 10 kWh per day then the normal rate.</div>
+    <div id="tierBox"></div>
+
+    <div class="q">Controlled load ${hasCLData() ? '<span class="pill" style="background:#e7f6ec">found in your NEM12 file</span>' : '<span class="pill">not found in the loaded file</span>'}</div>
+    ${typeRadios('cl', p, 'Single rate', 'Different rates by time of day')}
+    <div id="box_cl"></div>
+    <div class="row"><label class="f">Controlled load supply (c/day, if charged separately) ${numInput(p,'clSupply')}</label></div>
+    <div class="small muted" style="margin-top:4px">SA Power Networks sets controlled load network rates for each period, but many retailers charge one rate at all times. The meter records controlled load on its own channel.</div>
+
+    <div class="q">Fees and discounts</div>
+    <div class="row">
+      <label class="f">Membership or other fees ($/year) ${numInput(p,'feesAnnual')}</label>
+      <label class="f">Guaranteed discount (% off usage) ${numInput(p,'discountPct')}</label>
+      <label class="radio"><input type="checkbox" id="discSup" ${p.discountOnSupply?'checked':''}> Discount also applies to supply charges</label>
+    </div>
+    <label class="f" style="margin-top:8px">Notes (retailer, plan code, BPID date…) <textarea id="notes" rows="2" style="width:100%;font:inherit;padding:6px;border:1px solid #cfd4dc;border-radius:6px">${esc(p.notes)}</textarea></label>
+  `;
+  ['import','export','cl'].forEach(kind => {
+    ed.querySelectorAll(`input[name=ty_${kind}]`).forEach(r => r.onchange = () => { p[KIND[kind].type] = r.value; renderEditor(); changed(); });
+  });
+  if (i>0){
+    $('#copyCur').onclick = async () => { if (!await ask('Replace this plan with a copy of Current?')) return;
+      const c = normalisePlan(JSON.parse(JSON.stringify(plans[0]))); c.name = 'Copy of ' + plans[0].name; plans[i] = c; renderTabs(); renderEditor(); changed(); };
+    const del = $('#delPlan');
+    if (del) del.onclick = async () => { if (!await ask('Remove "' + p.name + '"?')) return; plans.splice(i,1); activeTab = 0; renderTabs(); renderEditor(); changed(); };
+  }
+  $('#discSup').onchange = e => { p.discountOnSupply = e.target.checked; changed(); };
+  $('#notes').oninput = e => { p.notes = e.target.value; changed(); };
+  ['import','export','cl'].forEach(kind => renderRateBox(kind, $('#box_'+kind)));
+  renderTiers();
+}
+
+function renderRateBox(kind, box){
+  const p = plans[activeTab];
+  const K = KIND[kind];
+  if (p[K.type] !== 'tou'){
+    box.innerHTML = `<div class="row" style="margin:6px 0 10px"><label class="f">${K.flatLabel} (c/kWh) ${numInput(p, K.flat)}</label></div>`;
+    return;
+  }
+  const sched = p[K.sched];
+  if (!brush[kind] || !sched.bands.find(b=>b.id===brush[kind])) brush[kind] = sched.bands[0] && sched.bands[0].id;
+  const presetOpts = Object.entries(PRESETS[kind]).map(([k,v]) => `<option value="${k}">${esc(v.label)}</option>`).join('');
+  box.innerHTML = `<div class="sched">
+    <div class="row">
+      <label class="f">Reset periods to a template <select class="preset"><option value="">Choose…</option>${presetOpts}</select></label>
+      <label class="radio"><input type="checkbox" class="split" ${sched.splitWeekend?'checked':''}> Weekends have different times</label>
+    </div>
+    <table class="bands" style="width:auto;margin-top:8px"><tbody>
+      ${sched.bands.map(b => `<tr class="${brush[kind]===b.id?'brush':''}" data-id="${b.id}">
+        <td><span class="swatch" style="background:${b.colour}" title="Click to paint this period on the grid"></span></td>
+        <td>${textInput(b,'name',null,170)}</td>
+        <td>${numInput(b,'rate',{w:100})} <span class="small muted">c/kWh</span></td>
+        <td><input type="color" value="${b.colour}" class="col" style="width:36px;padding:0;height:26px"></td>
+        <td>${sched.bands.length>1?'<button class="small danger del">Remove</button>':''}</td>
+      </tr>`).join('')}
+    </tbody></table>
+    <button class="small add">+ Add a time period</button>
+    <div class="small muted" style="margin-top:8px">If two periods cost the same (e.g. Morning and Evening Peak), enter the same rate in both. To change when a period applies, click its colour square, then click or drag across the grid. Each square is half an hour.</div>
+    <div class="gridwrap"><div class="grid"></div></div>
+  </div>`;
+  const grid = box.querySelector('.grid');
+  const rows = sched.splitWeekend ? [['Mon–Fri','weekday'],['Sat–Sun','weekend']] : [['Every day','weekday']];
+  const colour = {}; sched.bands.forEach(b => colour[b.id] = b.colour);
+  let html = '<div></div>';
+  for (let hh=0; hh<24; hh++) html += `<div class="hr">${hh===0?'12a':hh<12?hh+'a':hh===12?'12p':(hh-12)+'p'}</div>`;
+  rows.forEach(([lbl,key]) => {
+    html += `<div class="lbl">${lbl}</div>`;
+    for (let s=0;s<SLOTS;s++){
+      const id = sched[key][s];
+      const t = `${String(Math.floor(s/2)).padStart(2,'0')}:${s%2?'30':'00'}`;
+      html += `<div class="cell" data-row="${key}" data-s="${s}" style="background:${colour[id]||'#ddd'}" title="${t} ${esc((sched.bands.find(b=>b.id===id)||{}).name||'')}"></div>`;
+    }
+  });
+  grid.innerHTML = html;
+  const paint = cell => {
+    const bid = brush[kind]; if (!bid) return;
+    sched[cell.dataset.row][+cell.dataset.s] = bid;
+    cell.style.background = colour[bid];
+  };
+  grid.querySelectorAll('.cell').forEach(c => {
+    c.onmousedown = e => { e.preventDefault(); painting = true; paint(c); };
+    c.onmouseenter = () => { if (painting) paint(c); };
+  });
+
+  box.querySelectorAll('tr[data-id]').forEach(tr => {
+    const b = sched.bands.find(x => x.id === tr.dataset.id);
+    tr.querySelector('.swatch').onclick = () => { brush[kind] = b.id; renderRateBox(kind, box); };
+    tr.querySelector('.col').oninput = e => { b.colour = e.target.value; changed(); renderRateBox(kind, box); };
+    const del = tr.querySelector('.del');
+    if (del) del.onclick = () => {
+      const rest = sched.bands.filter(x => x.id !== b.id);
+      const fallback = rest[0].id;
+      ['weekday','weekend'].forEach(k => sched[k] = sched[k].map(id => id===b.id ? fallback : id));
+      sched.bands = rest;
+      if (K.tiers) p[K.tiers].forEach(t => { if (t.band===b.id) t.band='any'; });
+      changed(); renderEditor();
+    };
+  });
+  box.querySelector('.add').onclick = () => {
+    const used = sched.bands.map(b=>b.colour);
+    const c = BAND_COLOURS.find(x => !used.includes(x)) || '#888888';
+    const nb = { id:uid(), name:'New period', rate:0, colour:c };
+    sched.bands.push(nb); brush[kind] = nb.id; changed(); renderEditor();
+  };
+  box.querySelector('.split').onchange = e => { sched.splitWeekend = e.target.checked; if (e.target.checked) sched.weekend = sched.weekday.slice(); changed(); renderRateBox(kind, box); };
+  box.querySelector('.preset').onchange = async e => {
+    const k = e.target.value; if (!k) return;
+    if (!await ask('Replace these time periods (and their rates) with "' + PRESETS[kind][k].label + '"?')) { e.target.value=''; return; }
+    const ns = PRESETS[kind][k].make();
+    p[K.sched] = ns;
+    if (K.tiers) p[K.tiers].forEach(t => t.band='any');
+    if (kind==='import' && k==='freemid' && !p.importTiers.length)
+      p.importTiers.push({ label:'Free power (first 24 kWh/day)', kwh:24, rate:0, band:ns.bands[3].id });
+    changed(); renderEditor();
+  };
+}
+
+function renderTiers(){
+  const p = plans[activeTab];
+  const box = $('#tierBox');
+  const bandOpts = (kind, sel) => {
+    const type = kind==='import' ? p.importType : p.exportType;
+    const sched = kind==='import' ? p.importSched : p.exportSched;
+    let o = `<option value="any" ${sel==='any'?'selected':''}>Any time</option>`;
+    if (type==='tou') sched.bands.forEach(b => o += `<option value="${b.id}" ${sel===b.id?'selected':''}>Only during ${esc(b.name)}</option>`);
+    return o;
+  };
+  const section = (kind, list, title) => `
+    <table style="width:auto;margin:4px 0"><thead><tr><th>${title}</th><th>First … kWh per day</th><th>Rate (c/kWh)</th><th>When</th><th></th></tr></thead><tbody>
+    ${list.map((t,ti) => `<tr data-k="${kind}" data-i="${ti}">
+       <td>${textInput(t,'label',null,220)}</td><td>${numInput(t,'kwh',{w:90})}</td><td>${numInput(t,'rate',{w:90})}</td>
+       <td><select class="tb">${bandOpts(kind,t.band)}</select></td><td><button class="small danger tdel">Remove</button></td></tr>`).join('')
+      || `<tr><td colspan="5" class="muted small">None</td></tr>`}
+    </tbody></table>
+    <button class="small tadd" data-k="${kind}">+ Add ${kind==='import'?'usage':'feed-in'} allowance</button>`;
+  box.innerHTML = `<div class="sched">${section('import', p.importTiers, 'Usage (import)')}<div style="height:10px"></div>${section('export', p.exportTiers, 'Feed-in (export)')}</div>`;
+  box.querySelectorAll('tr[data-k]').forEach(tr => {
+    const list = tr.dataset.k==='import' ? p.importTiers : p.exportTiers;
+    const t = list[+tr.dataset.i];
+    tr.querySelector('.tb').onchange = e => { t.band = e.target.value; changed(); };
+    tr.querySelector('.tdel').onclick = () => { list.splice(+tr.dataset.i,1); changed(); renderTiers(); };
+  });
+  box.querySelectorAll('.tadd').forEach(b => b.onclick = () => {
+    const list = b.dataset.k==='import' ? p.importTiers : p.exportTiers;
+    list.push({ label: b.dataset.k==='import' ? 'Free/cheap usage allowance' : 'Feed-in bonus', kwh:10, rate:0, band:'any' });
+    changed(); renderTiers();
+  });
+}
+
+/* ---------- Data loading ---------- */
+function hasCLData(){ return !!(parsed && curNmi && Object.values(parsed.nmis[curNmi].channels).some(ch => roles[ch.key]==='cl')); }
+
+function handleText(text, name){
+  parsed = parseNEM12(text);
+  const nmis = Object.keys(parsed.nmis);
+  if (!nmis.length){ alertData(parsed.warnings); return; }
+  $('#nmiSel').innerHTML = nmis.map(n => `<option>${esc(n)}</option>`).join('');
+  selectNmi(nmis[0]);
+  $('#dataInfo').classList.remove('hidden');
+  $('#drop').firstElementChild.insertAdjacentHTML('afterbegin', '');
+  $('#drop').querySelector('.small').textContent = 'Loaded: ' + name + '. Drop another file to replace it.';
+}
+function alertData(w){ $('#dataInfo').classList.remove('hidden'); $('#dataWarn').innerHTML = w.map(x=>`<li>${esc(x)}</li>`).join(''); }
+
+function selectNmi(n){
+  curNmi = n;
+  const chans = parsed.nmis[n].channels;
+  const keys = Object.keys(chans);
+  roles = {}; keys.forEach(k => roles[k] = defaultRole(k, keys));
+  // date range
+  let min = null, max = null;
+  for (const ch of Object.values(chans)) for (const d of ch.days.keys()){ if (!min || d<min) min=d; if (!max || d>max) max=d; }
+  $('#fromDate').value = min ? ymd(min) : ''; $('#toDate').value = max ? ymd(max) : '';
+  $('#fromDate').min = $('#toDate').min = min ? ymd(min) : ''; $('#fromDate').max = $('#toDate').max = max ? ymd(max) : '';
+  if (min && max){ const span = (Date.parse(ymd(max)) - Date.parse(ymd(min)))/864e5; if (span > 370) setLast12(); }
+  renderChannels(); renderEditor(); recalc();
+}
+function setLast12(){
+  const to = $('#toDate').value; if (!to) return;
+  const d = new Date(to + 'T00:00:00Z'); d.setUTCFullYear(d.getUTCFullYear()-1); d.setUTCDate(d.getUTCDate()+1);
+  let f = d.toISOString().slice(0,10); if (f < $('#fromDate').min) f = $('#fromDate').min;
+  $('#fromDate').value = f;
+}
+const rangeOpts = () => ({ from:($('#fromDate').value||'').replace(/-/g,'')||null, to:($('#toDate').value||'').replace(/-/g,'')||null });
+
+function renderChannels(){
+  const chans = parsed.nmis[curNmi].channels;
+  const {from, to} = rangeOpts();
+  $('#chanTable tbody').innerHTML = Object.values(chans).map(ch => {
+    let sum = 0, n = 0;
+    for (const [d, v] of ch.days){ if ((from && d<from) || (to && d>to)) continue; n++; for (const x of v) sum += x; }
+    return `<tr><td><b>${esc(ch.key)}</b> <span class="small muted">${ch.serial?'meter '+esc(ch.serial):''}</span></td><td>${esc(ch.uom)}</td><td>${ch.len} min</td>
+      <td class="num">${n}</td><td class="num">${sum.toLocaleString('en-AU',{maximumFractionDigits:1})}</td>
+      <td><select data-k="${esc(ch.key)}">
+        ${[['imp','Grid usage (general)'],['cl','Controlled load'],['exp','Solar export'],['ignore','Ignore']].map(([v,l]) => `<option value="${v}" ${roles[ch.key]===v?'selected':''}>${l}</option>`).join('')}
+      </select></td></tr>`;
+  }).join('');
+  $('#chanTable').querySelectorAll('select').forEach(s => s.onchange = () => { roles[s.dataset.k] = s.value; renderEditor(); recalc(); });
+}
+
+/* ---------- Results ---------- */
+function recalc(){
+  if (!parsed || !curNmi){ $('#noData').classList.remove('hidden'); $('#results').classList.add('hidden'); return; }
+  const opts = Object.assign({ roles, localTime: $('#tzMode').value==='local' }, rangeOpts());
+  const data = buildDays(parsed.nmis[curNmi], opts);
+  const warn = [];
+  if (!data.supplyDays){ alertData(['No data in the selected date range.']); return; }
+  $('#dataWarn').innerHTML = [
+    ...parsed.warnings,
+    data.supplyDays < 360 ? `The period is ${data.supplyDays} days, so the yearly figures are scaled up. Seasonal usage (summer air-con, winter heating) makes that less reliable.` : null,
+    data.nonActualDays ? `${data.nonActualDays} day(s) contain estimated or substituted readings (not "A" actual).` : null
+  ].filter(Boolean).map(x=>`<li>${esc(x)}</li>`).join('');
+
+  $('#noData').classList.add('hidden'); $('#results').classList.remove('hidden');
+  $('#usageSummary').innerHTML = `NMI ${esc(curNmi)} · ${ymd(data.first)} to ${ymd(data.last)} (${data.supplyDays} days) ·
+     Grid usage <b>${kwh(data.totals.imp)}</b>${data.totals.cl?` · Controlled load <b>${kwh(data.totals.cl)}</b>`:''} · Solar export <b>${kwh(data.totals.exp)}</b> ·
+     ${$('#tzMode').value==='local'?'Times converted to SA local time':'Times left as NEM time (AEST)'}`;
+
+  const active = plans.map((p,i) => ({p,i}));
+  const res = active.map(x => ({ ...x, r: computePlan(x.p, data) }));
+  const base = res[0].r;
+
+  $('#totals').innerHTML = res.map(({p,i,r}) => {
+    const d = r.annual - base.annual;
+    const deltaTxt = i===0 ? '<span class="muted">baseline</span>' :
+      `<span class="delta ${d<0?'good':'bad'}">${d<0?'Saves about':'Costs about'} ${money(Math.abs(d))} a year</span> <span class="muted small">vs Current</span>`;
+    return `<div class="tot" style="border-top-color:${PLAN_COLOURS[i]}">
+      <div class="small muted">${esc(p.name)}</div>
+      <div class="big">${money(r.annual)}<span class="small muted" style="font-weight:400"> / year (est.)</span></div>
+      <div>${deltaTxt}</div>
+      <div class="small muted" style="margin-top:4px">${money(r.total)} for the ${r.days} days in the file · average usage rate ${r.effectiveImport.toFixed(1)} c/kWh</div>
+    </div>`;
+  }).join('');
+
+  res.forEach(({p,r}) => {
+    const zero = [];
+    Object.values(r.impBand).forEach(b => { if (b.kwh>0 && !b.rate) zero.push(b.name); });
+    if (zero.length) warn.push(`"${p.name}": usage rate is 0 c/kWh for ${zero.join(', ')}. Is that intended?`);
+    const clZero = Object.values(r.clBand).filter(b => b.kwh>0 && !b.rate).map(b => b.name);
+    if (clZero.length) warn.push(`"${p.name}": the file has controlled load but its rate is 0 c/kWh${p.clType==='tou'?' for '+clZero.join(', '):''}.`);
+    if (!+p.supply) warn.push(`"${p.name}": the daily supply charge is 0.`);
+  });
+  $('#planWarn').innerHTML = warn.map(x=>`<li>${esc(x)}</li>`).join('');
+
+  renderChart(res);
+  renderBreakdown(res, data);
+}
+
+function renderChart(res){
+  const months = [...new Set(res.flatMap(x => Object.keys(x.r.monthly)))].map(Number).sort((a,b)=>a-b);
+  const W = 1000, H = 300, padL = 60, padB = 36, padT = 14;
+  const vals = res.flatMap(x => months.map(m => (x.r.monthly[m]||{}).total||0));
+  let max = Math.max(0, ...vals), min = Math.min(0, ...vals);
+  if (max === min) max = min + 1;
+  const step = niceStep((max-min)/5);
+  max = Math.ceil(max/step)*step; min = Math.floor(min/step)*step;
+  const y = v => padT + (max - v) / (max - min) * (H - padT - padB);
+  const groupW = (W - padL - 10) / months.length;
+  const barW = Math.min(28, groupW * 0.8 / res.length);
+  let svg = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Monthly cost by plan">`;
+  for (let v=min; v<=max+1e-9; v+=step){
+    svg += `<line x1="${padL}" x2="${W-10}" y1="${y(v)}" y2="${y(v)}" stroke="${Math.abs(v)<1e-9?'#98a2b3':'#eaecf0'}"/>`;
+    svg += `<text x="${padL-6}" y="${y(v)+4}" font-size="11" text-anchor="end" fill="#667085">${money(v).replace('.00','')}</text>`;
+  }
+  const MN = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  months.forEach((m, mi) => {
+    const gx = padL + mi*groupW + (groupW - barW*res.length)/2;
+    res.forEach((x, k) => {
+      const v = (x.r.monthly[m]||{}).total||0;
+      const y0 = y(Math.max(0,v)), y1 = y(Math.min(0,v));
+      svg += `<rect x="${gx + k*barW}" y="${y0}" width="${barW-2}" height="${Math.max(1,y1-y0)}" rx="2" fill="${PLAN_HEX[x.i]}"><title>${esc(x.p.name)} ${MN[m%100-1]} ${Math.floor(m/100)}: ${money(v)}</title></rect>`;
+    });
+    svg += `<text x="${padL + mi*groupW + groupW/2}" y="${H-padB+16}" font-size="11" text-anchor="middle" fill="#667085">${MN[m%100-1]}</text>`;
+    if (mi===0 || m%100===1) svg += `<text x="${padL + mi*groupW + groupW/2}" y="${H-padB+30}" font-size="10" text-anchor="middle" fill="#98a2b3">${Math.floor(m/100)}</text>`;
+  });
+  svg += '</svg>';
+  const legend = `<div class="legend">${res.map(x => `<span><i style="background:${PLAN_HEX[x.i]}"></i>${esc(x.p.name)}</span>`).join('')}</div>`;
+  $('#chart').innerHTML = svg + legend + '<div class="small muted">Partial months at the start and end of the file look smaller. Hover over a bar for its value.</div>';
+}
+function niceStep(raw){ const p = Math.pow(10, Math.floor(Math.log10(raw||1))); const n = raw/p; return (n<=1?1:n<=2?2:n<=5?5:10)*p; }
+
+function renderBreakdown(res, data){
+  const head = `<thead><tr><th>Item</th>${res.map(x => `<th class="num" style="color:${PLAN_HEX[x.i]}">${esc(x.p.name)}</th>`).join('')}</tr></thead>`;
+  const cell = (r, fn) => { const v = fn(r); return v==null ? '<td class="num muted">–</td>' : `<td class="num">${v}</td>`; };
+  const fmt = (o) => o && (o.kwh>0.0005 || o.cost) ? `${money(o.cost)}<br><span class="small muted">${kwh(o.kwh)}${o.rate!=null?' @ '+(+o.rate).toFixed(2)+'c':''}</span>` : null;
+  const rows = [];
+  const sec = t => rows.push(`<tr><th colspan="${res.length+1}" style="padding-top:12px;color:var(--ink)">${t}</th></tr>`);
+  const line = (label, fn) => rows.push(`<tr><td>${label}</td>${res.map(x => cell(x.r, fn)).join('')}</tr>`);
+
+  sec('Charges');
+  line('Supply charges', r => money(r.supply));
+  // import band rows: union of names per plan, listed per plan's own bands (names differ by plan)
+  const maxImp = Math.max(...res.map(x => Object.keys(x.r.impBand).length + x.r.impTiers.length));
+  for (let k=0;k<maxImp;k++){
+    line(k===0?'Usage by period':'', r => {
+      const items = [...r.impTiers.map(t => ({...t, name:t.label})), ...Object.values(r.impBand)];
+      const it = items[k]; if (!it) return null;
+      return `<span class="small">${esc(it.name)}</span><br>` + (fmt(it) || '<span class="muted">$0.00</span>');
+    });
+  }
+  if (data.totals.cl > 0){
+    const maxCl = Math.max(...res.map(x => Object.keys(x.r.clBand).length));
+    for (let k=0;k<maxCl;k++) line(k===0?'Controlled load':'', r => {
+      const it = Object.values(r.clBand)[k]; if (!it) return null;
+      return `<span class="small">${esc(it.name)}</span><br>` + (fmt(it) || '<span class="muted">$0.00</span>');
+    });
+  }
+  if (res.some(x => x.r.fees)) line('Fees', r => money(r.fees));
+  sec('Credits');
+  const maxExp = Math.max(...res.map(x => Object.keys(x.r.expBand).length + x.r.expTiers.length));
+  for (let k=0;k<maxExp;k++){
+    line(k===0?'Feed-in by period':'', r => {
+      const items = [...r.expTiers.map(t => ({...t, name:t.label})), ...Object.values(r.expBand)];
+      const it = items[k]; if (!it) return null;
+      return `<span class="small">${esc(it.name)}</span><br>` + (fmt(it) || '<span class="muted">$0.00</span>');
+    });
+  }
+  if (res.some(x => x.r.discount)) line('Discount', r => money(-r.discount));
+  sec('Totals');
+  line('<b>Total for the period</b>', r => `<b>${money(r.total)}</b>`);
+  line('<b>Estimated per year</b>', r => `<b>${money(r.annual)}</b>`);
+  line('Difference vs Current (per year)', r => { const d = r.annual - res[0].r.annual; return r===res[0].r ? '–' : `<span style="color:${d<0?'var(--good)':'var(--bad)'}">${d<0?'-':'+'}${money(Math.abs(d))}</span>`; });
+  $('#breakdown').innerHTML = head + '<tbody>' + rows.join('') + '</tbody>';
+}
+
+/* ---------- Wiring ---------- */
+const drop = $('#drop');
+['dragenter','dragover'].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.add('hover'); }));
+['dragleave','drop'].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.remove('hover'); }));
+drop.addEventListener('drop', e => { const f = e.dataTransfer.files[0]; if (f) f.text().then(t => handleText(t, f.name)); });
+$('#file').onchange = e => { const f = e.target.files[0]; if (f) f.text().then(t => handleText(t, f.name)); };
+$('#nmiSel').onchange = e => selectNmi(e.target.value);
+$('#fromDate').onchange = $('#toDate').onchange = () => { renderChannels(); recalc(); };
+$('#last12').onclick = () => { setLast12(); renderChannels(); recalc(); };
+$('#tzMode').onchange = recalc;
+$('#saveJson').onclick = () => {
+  const blob = new Blob([JSON.stringify({ app:'electricity-rates-comparison', version:1, saved:new Date().toISOString(), plans }, null, 2)], {type:'application/json'});
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'tariff-plans.json'; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+};
+$('#copyJson').onclick = async () => {
+  const txt = JSON.stringify({ app:'electricity-rates-comparison', version:1, saved:new Date().toISOString(), plans }, null, 2);
+  try { await navigator.clipboard.writeText(txt); ask('Plans copied. Paste them into a text file ending in .json to keep them, then use "Load plans from a file" later.', true); }
+  catch(e){ ask('Copying was blocked here. Use "Save all plans to a file" instead.', true); }
+};
+$('#loadJson').onchange = e => {
+  const f = e.target.files[0]; if (!f) return;
+  f.text().then(t => { try { const p = plansFromSaved(JSON.parse(t)); if (!p) throw 0; plans = p; activeTab = 0; renderTabs(); renderEditor(); changed(); } catch(err){ ask('That file does not look like a saved plans file.', true); } });
+};
+$('#resetPlans').onclick = async () => { if (await ask('Clear all plans and start again with a blank Current and Proposed plan?')){ plans = startingPlans().map(normalisePlan); activeTab = 0; renderTabs(); renderEditor(); changed(); } };
+
+renderTabs(); renderEditor();
+
+/* ---------- Receive a meter file passed from the sizer page (same site only; consumed once) ---------- */
+(async () => {
+  if (location.hash !== '#from-sizer') return;
+  const bar = $('#handoffBar');
+  const clearBar = () => { history.replaceState(null, '', location.pathname + location.search); };
+  try {
+    const db = await new Promise((res, rej) => { const r = indexedDB.open('erc_handoff', 1); r.onupgradeneeded = () => r.result.createObjectStore('h'); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); });
+    const rec = await new Promise((res, rej) => { const tx = db.transaction('h', 'readwrite'); const st = tx.objectStore('h'); const g = st.get('nem12'); g.onsuccess = () => { st.delete('nem12'); res(g.result); }; g.onerror = () => rej(g.error); });
+    db.close();
+    if (rec && rec.nem12 && Date.now() - (rec.created||0) < 10*60*1000){
+      handleText(rec.nem12, rec.name || 'meter file');
+      bar.innerHTML = `Using the meter file from the Battery and Solar Sizing Assistant: <b>${esc(rec.name||'meter file')}</b>. <button class="small" id="hoClear">Clear and start blank</button>`;
+      bar.classList.remove('hidden');
+      $('#hoClear').onclick = () => { clearBar(); location.reload(); };
+    } else {
+      bar.textContent = 'The meter file from the sizer is only passed once, so it is not loaded now. Choose the file above, or go back to the sizer and use its "Compare electricity tariffs" button again.';
+      bar.classList.remove('hidden'); clearBar();
+    }
+  } catch(e){ clearBar(); }
+})();
+</script>
+</body>
+</html>
